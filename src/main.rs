@@ -2,6 +2,8 @@ use axum::{routing::get, serve, Router};
 use clap::Parser;
 use tokio::net::TcpListener;
 
+mod time_signature;
+
 #[derive(Parser, Debug)]
 pub struct Args {
     #[arg(long, default_value_t = 8000)]
