@@ -1,5 +1,7 @@
 use ethers::types::{Address, Bytes, Signature, U256};
+use serde::Serialize;
 
+#[derive(Clone, Debug, Serialize)]
 pub struct TimeSignature {
     epoch: U256,
     time_keeper: Address,
@@ -35,9 +37,9 @@ impl TimeSignature {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-    use ethers::types::{Address, Bytes};
     use super::TimeSignature;
+    use ethers::types::{Address, Bytes};
+    use std::str::FromStr;
 
     #[test]
     fn test_verify() -> Result<(), String> {
