@@ -21,7 +21,7 @@ pub async fn handle_add_time_sig(
     pool: Arc<Mutex<TimeSigPool>>,
 ) -> Result<(), StatusCode> {
     let epoch = U256::from_str_radix(&input.epoch, 10);
-    let time_keeper = Bytes::from_str(&input.time_keeper);
+    let time_keeper = Address::from_str(&input.time_keeper);
     let signature = Bytes::from_str(&input.signature);
     if let Err(err) = epoch {
         println!("Error extracting epoch: {}", err);
@@ -37,7 +37,7 @@ pub async fn handle_add_time_sig(
     }
     let time_signature = TimeSignature::new(
         epoch.unwrap(),
-        Address::from_slice(&time_keeper.unwrap().to_vec()),
+        time_keeper.unwrap(),
         signature.unwrap(),
     );
     if time_signature.verify() {
