@@ -39,7 +39,7 @@ pub async fn handle_add_time_sig(
     }
     {
         let mut db_conn = db_conn.lock().await;
-        match is_address_whitelisted(db_conn.as_mut(), time_keeper.unwrap()).await {
+        match is_address_whitelisted(db_conn.as_mut(), &time_keeper.unwrap()).await {
             Ok(res) => {
                 if !res {
                     println!("The address {} isn't whitelisted", time_keeper.unwrap());

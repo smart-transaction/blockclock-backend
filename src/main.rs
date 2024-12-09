@@ -4,16 +4,19 @@ use axum::{
     routing::{get, post},
     serve, Router,
 };
+use claim_avatar::handle_claim_avatar;
 use clap::Parser;
 use mysql::Pool;
 use onboarding::handle_onboard;
 use time_pool::{handle_add_time_sig, handle_list_time_sigs, TimeSigPool};
 use tokio::{net::TcpListener, sync::Mutex};
 
+mod claim_avatar;
 mod db;
 mod onboarding;
 mod time_pool;
 mod time_signature;
+mod user_data;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -49,7 +52,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 move |input| handle_add_time_sig(input, time_sig_pool, db_conn)
             }),
         )
-        .with_state(time_sig_pool)
+        .route(
+            "/claim_avatar",
+            post({
+                let db_conn = Arc::clone(&db_conn);
+                move |input| handle_claim_avatar(input, db_conn)
+            }),
+        )
         .route(
             "/onboard",
             post({
