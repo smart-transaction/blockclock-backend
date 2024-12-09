@@ -1,13 +1,17 @@
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 
 use axum::{
     routing::{get, post},
     serve, Router,
 };
 use clap::Parser;
+use mysql::Pool;
+use onboarding::handle_onboard;
 use time_pool::{handle_add_time_sig, handle_list_time_sigs, TimeSigPool};
 use tokio::{net::TcpListener, sync::Mutex};
 
+mod db;
+mod onboarding;
 mod time_pool;
 mod time_signature;
 
@@ -15,12 +19,18 @@ mod time_signature;
 pub struct Args {
     #[arg(long, default_value_t = 8000)]
     pub port: u16,
+
+    #[arg(long)]
+    pub mysql_url: String,
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let time_sig_pool = Arc::new(Mutex::new(TimeSigPool::new()));
+
+    let db_conn = Pool::new(args.mysql_url.as_str())?.get_conn()?;
+    let db_conn: Arc<Mutex<mysql::PooledConn>> = Arc::new(Mutex::new(db_conn));
 
     let app = Router::new()
         .route("/", get(|| async { "Blockclock Backend" }))
@@ -35,10 +45,18 @@ async fn main() {
             "/add_time_sig",
             post({
                 let time_sig_pool = Arc::clone(&time_sig_pool);
-                move |input| handle_add_time_sig(input, time_sig_pool)
+                let db_conn = Arc::clone(&db_conn);
+                move |input| handle_add_time_sig(input, time_sig_pool, db_conn)
             }),
         )
-        .with_state(time_sig_pool);
+        .with_state(time_sig_pool)
+        .route(
+            "/onboard",
+            post({
+                let db_conn = Arc::clone(&db_conn);
+                move |input| handle_onboard(input, db_conn)
+            }),
+        );
 
     let tcp_listener = TcpListener::bind(format!("0.0.0.0:{}", args.port))
         .await
@@ -46,4 +64,5 @@ async fn main() {
 
     println!("Starting server at port {}", args.port);
     serve(tcp_listener, app).await.unwrap();
+    Ok(())
 }
