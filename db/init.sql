@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS whitelisted_addresses (
   address VARCHAR(255),
   avatar VARCHAR(255),
   PRIMARY KEY (address),
-  UNIQUE_INDEX avatar_idx(avatar)
+  UNIQUE INDEX avatar_idx(avatar)
 );
 
 -- Create the user.
