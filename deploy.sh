@@ -60,7 +60,7 @@ sudo chmod a+x down.sh
 DOCKER_LOCATION="us-central1-docker.pkg.dev"
 DOCKER_PREFIX="${DOCKER_LOCATION}/solver-438012/solver-docker-repo"
 SOLVER_DOCKER_IMAGE="${DOCKER_PREFIX}/blockclock-solver-image:${OPT}"
-DB_DOCKER_IMAGE="${DOCKER_LOCATION}/blockclock-db-image:live"
+DB_DOCKER_IMAGE="${DOCKER_PREFIX}/blockclock-db-image:live"
 
 # Create docker-compose.yml file.
 cat >docker-compose.yml << COMPOSE
@@ -86,6 +86,9 @@ services:
       - mysql:/var/lib/mysql
     ports:
       - 3306:3306
+
+volumes:
+  mysql:
 
 COMPOSE
 
