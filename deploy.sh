@@ -71,7 +71,7 @@ services:
     container_name: blockclock_solver
     image: ${SOLVER_DOCKER_IMAGE}
     environment:
-      - MYSQL_APP_PASSWORD=\${MYSQL_APP_PASSWORD}
+      - MYSQL_URL=mysql://server:\${MYSQL_APP_PASSWORD}@blockclock_db:3306/timekeeper
     ports:
       - 8000:8000
 

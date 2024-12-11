@@ -24,4 +24,4 @@ RUN update-ca-certificates
 COPY --from=builder /usr/local/cargo/bin/blockclock-backend /usr/local/bin/blockclock-backend
 
 EXPOSE 8000/tcp
-CMD "blockclock-backend" "--port=8000" "--mysql-url=${MYSQL_APP_PASSWORD}"
+CMD "blockclock-backend" "--port=8000" "--mysql-url=${MYSQL_URL}"
