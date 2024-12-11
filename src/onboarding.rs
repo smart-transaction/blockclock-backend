@@ -11,8 +11,12 @@ pub async fn handle_onboard(
     db_conn: Arc<Mutex<PooledConn>>,
 ) -> Result<(), StatusCode> {
     let mut db_conn = db_conn.lock().await;
-    match store_user_data(db_conn.as_mut(), &input_json.time_keeper, &input_json.avatar)
-        .await
+    match store_user_data(
+        db_conn.as_mut(),
+        &input_json.time_keeper,
+        &input_json.avatar,
+    )
+    .await
     {
         Ok(_) => {
             return Ok(());
