@@ -44,3 +44,5 @@ This is a service that provides the blockclock backend and solver functionality.
 4.  `/list_time_sigs`
 
     The `GET` request, debug output of all existing time signatures in tne memory pool.
+
+    Params: None
