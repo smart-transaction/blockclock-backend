@@ -6,9 +6,9 @@ use mysql::PooledConn;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-use crate::{db::is_address_whitelisted, time_signature::TimeSignature};
+use crate::{db::is_address_whitelisted, time_signature::Chronicle};
 
-pub type TimeSigPool = Vec<TimeSignature>;
+pub type TimeSigPool = Vec<Chronicle>;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TimeSigInput {
@@ -47,13 +47,13 @@ pub async fn handle_add_time_sig(
                 }
             }
             Err(err) => {
-                println!("Error checking of time keepers whitelist: {}", err);
+                println!("Error checking time keepers whitelist: {}", err);
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
         }
     }
     let time_signature =
-        TimeSignature::new(epoch.unwrap(), time_keeper.unwrap(), signature.unwrap());
+        Chronicle::new(epoch.unwrap(), time_keeper.unwrap(), signature.unwrap());
     if time_signature.verify() {
         let mut time_sig_pool = pool.lock().await;
         time_sig_pool.push(time_signature);

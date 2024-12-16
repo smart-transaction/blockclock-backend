@@ -1,4 +1,8 @@
-use std::{error::Error, sync::Arc};
+use std::{
+    error::Error,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
 
 use axum::{
     routing::{get, post},
@@ -9,13 +13,16 @@ use clap::Parser;
 use mysql::Pool;
 use onboarding::handle_onboard;
 use time_pool::{handle_add_time_sig, handle_list_time_sigs, TimeSigPool};
-use tokio::{net::TcpListener, sync::Mutex};
+use timer::TimeTick;
+use tokio::{net::TcpListener, sync::Mutex, task::JoinSet};
 
 mod claim_avatar;
 mod db;
+mod meantime;
 mod onboarding;
 mod time_pool;
 mod time_signature;
+mod timer;
 mod user_data;
 
 #[derive(Parser, Debug)]
@@ -25,15 +32,30 @@ pub struct Args {
 
     #[arg(long)]
     pub mysql_url: String,
+
+    #[arg(long)]
+    pub time_window: String,
+}
+
+fn time_handler(timestamp: SystemTime) {
+    // TODO: Add time handling with checking signatures and sending to the contract
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let time_sig_pool = Arc::new(Mutex::new(TimeSigPool::new()));
+    let time_window = parse_duration::parse(args.time_window.as_str());
 
     let db_conn = Pool::new(args.mysql_url.as_str())?.get_conn()?;
     let db_conn: Arc<Mutex<mysql::PooledConn>> = Arc::new(Mutex::new(db_conn));
+
+    let mut exec_set: JoinSet<()> = JoinSet::new();
+
+    let mut time_tick = TimeTick::new(Duration::new(0, 100000000));
+    exec_set.spawn(async move {
+        time_tick.ticker(time_handler).await;
+    });
 
     let app = Router::new()
         .route("/", get(|| async { "Blockclock Backend" }))

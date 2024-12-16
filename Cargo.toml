@@ -8,5 +8,6 @@ axum = { version = "0.7.9", features = ["ws"] }
 clap = { version = "4.5.21", features = ["derive"] }
 ethers = { version = "2.0.14", features = ["ws"] }
 mysql = "25.0.1"
+parse_duration = "2.1.1"
 serde = "1.0.215"
 tokio = { version = "1.41.1", features = ["full"] }
