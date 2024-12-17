@@ -15,6 +15,7 @@ do
   case ${OPT} in
     "dev")
         echo "Using dev environment"
+        CHAIN_ID=21363
         TIME_WINDOW="2s"
         WS_CHAIN_URL="wss://service.lestnet.org:8888"
         TICK_PERIOD="2s"
@@ -22,6 +23,7 @@ do
         ;;
     "prod")
         echo "Using prod environment"
+        CHAIN_ID=21363
         TIME_WINDOW="2s"
         WS_CHAIN_URL="wss://service.lestnet.org:8888"
         TICK_PERIOD="2s"
@@ -78,6 +80,7 @@ services:
     container_name: blockclock_solver
     image: ${SOLVER_DOCKER_IMAGE}
     environment:
+      - CHAIN_ID=${CHAIN_ID}
       - MYSQL_URL=mysql://server:\${MYSQL_APP_PASSWORD}@blockclock_db:3306/timekeeper
       - TIME_WINDOW=${TIME_WINDOW}
       - SOLVER_PRIVATE_KEY=\${SOLVER_PRIVATE_KEY}
