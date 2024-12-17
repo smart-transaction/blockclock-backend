@@ -21,8 +21,11 @@ do
         break
         ;;
     "prod")
-        echo "Prod environment is not implemented"
-        exit
+        echo "Using prod environment"
+        TIME_WINDOW="2s"
+        WS_CHAIN_URL="wss://service.lestnet.org:8888"
+        TICK_PERIOD="2s"
+        break
         ;;
     "quit")
         exit
