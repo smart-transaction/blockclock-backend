@@ -41,6 +41,7 @@ SECRET_SUFFIX=$(echo ${OPT} | tr '[a-z]' '[A-Z]')
 # Create necessary files.
 cat >up.sh << UP
 # Turn up solver.
+set -e
 
 # Secrets
 cat >.env << ENV

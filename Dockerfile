@@ -24,4 +24,4 @@ RUN update-ca-certificates
 COPY --from=builder /usr/local/cargo/bin/blockclock-backend /usr/local/bin/blockclock-backend
 
 EXPOSE 8000/tcp
-CMD "blockclock-backend" "--port=8000" "chain-id=${CHAIN_ID}" "--mysql-url=${MYSQL_URL}" "--time-window=${TIME_WINDOW}" "--solver-private-key=${SOLVER_PRIVATE_KEY}" "--ws-chain-url=${WS_CHAIN_URL}" "--tick-period=${TICK_PERIOD}"
+CMD "blockclock-backend" "--port=8000" "--chain-id=${CHAIN_ID}" "--mysql-url=${MYSQL_URL}" "--time-window=${TIME_WINDOW}" "--solver-private-key=${SOLVER_PRIVATE_KEY}" "--ws-chain-url=${WS_CHAIN_URL}" "--tick-period=${TICK_PERIOD}"
