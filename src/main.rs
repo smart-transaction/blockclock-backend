@@ -1,4 +1,4 @@
-use std::{error::Error, sync::Arc, time::Duration};
+use std::{error::Error, sync::Arc};
 
 use axum::{
     routing::{get, post},
@@ -46,13 +46,17 @@ pub struct Args {
 
     #[arg(long)]
     pub ws_chain_url: String,
+
+    #[arg(long)]
+    pub tick_period: String,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let time_sig_pool = Arc::new(Mutex::new(TimeSigPool::new()));
-    let time_window = parse_duration::parse(args.time_window.as_str())?;
+    let time_window = parse_duration::parse(&args.time_window)?;
+    let tick_period = parse_duration::parse(&args.tick_period)?;
 
     let db_conn = Pool::new(args.mysql_url.as_str())?.get_conn()?;
     let db_conn: Arc<Mutex<mysql::PooledConn>> = Arc::new(Mutex::new(db_conn));
@@ -77,7 +81,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         time_window,
     )));
 
-    let mut time_tick = TimeTick::new(Duration::new(0, 100000000), meantime_comp);
+    let mut time_tick = TimeTick::new(tick_period, meantime_comp);
     exec_set.spawn(async move {
         time_tick.ticker().await;
     });

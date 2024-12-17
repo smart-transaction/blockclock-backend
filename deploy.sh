@@ -15,6 +15,9 @@ do
   case ${OPT} in
     "dev")
         echo "Using dev environment"
+        TIME_WINDOW="2s"
+        WS_CHAIN_URL="wss://service.lestnet.org:8888"
+        TICK_PERIOD="2s"
         break
         ;;
     "prod")
@@ -39,6 +42,7 @@ cat >.env << ENV
 MYSQL_ROOT_PASSWORD=\$(gcloud secrets versions access 1 --secret="MYSQL_ROOT_PASSWORD_${SECRET_SUFFIX}")
 MYSQL_APP_PASSWORD=\$(gcloud secrets versions access 1 --secret="MYSQL_APP_PASSWORD_${SECRET_SUFFIX}")
 MYSQL_READER_PASSWORD=\$(gcloud secrets versions access 1 --secret="MYSQL_READER_PASSWORD_${SECRET_SUFFIX}")
+SOLVER_PRIVATE_KEY=\$(gcloud secrets versions access 1 --secret="BLOCKCLOCK_WALLET_PRIVATE_KEY_${SECRET_SUFFIX}")
 
 ENV
 
@@ -72,6 +76,10 @@ services:
     image: ${SOLVER_DOCKER_IMAGE}
     environment:
       - MYSQL_URL=mysql://server:\${MYSQL_APP_PASSWORD}@blockclock_db:3306/timekeeper
+      - TIME_WINDOW=${TIME_WINDOW}
+      - SOLVER_PRIVATE_KEY=\${SOLVER_PRIVATE_KEY}
+      - WS_CHAIN_URL=${WS_CHAIN_URL}
+      - TICK_PERIOD=${TICK_PERIOD}
     ports:
       - 8000:8000
 
