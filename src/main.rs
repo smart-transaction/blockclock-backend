@@ -1,8 +1,4 @@
-use std::{
-    error::Error,
-    sync::Arc,
-    time::{Duration, SystemTime},
-};
+use std::{error::Error, sync::Arc, time::Duration};
 
 use axum::{
     routing::{get, post},
@@ -10,6 +6,12 @@ use axum::{
 };
 use claim_avatar::handle_claim_avatar;
 use clap::Parser;
+use ethers::{
+    middleware::MiddlewareBuilder,
+    providers::{Provider, Ws},
+    signers::{LocalWallet, Signer},
+};
+use meantime::MeanTime;
 use mysql::Pool;
 use onboarding::handle_onboard;
 use time_pool::{handle_add_time_sig, handle_list_time_sigs, TimeSigPool};
@@ -35,26 +37,49 @@ pub struct Args {
 
     #[arg(long)]
     pub time_window: String,
-}
 
-fn time_handler(timestamp: SystemTime) {
-    // TODO: Add time handling with checking signatures and sending to the contract
+    #[arg(long)]
+    pub solver_private_key: LocalWallet,
+
+    #[arg(long)]
+    pub chain_id: u64,
+
+    #[arg(long)]
+    pub ws_chain_url: String,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let time_sig_pool = Arc::new(Mutex::new(TimeSigPool::new()));
-    let time_window = parse_duration::parse(args.time_window.as_str());
+    let time_window = parse_duration::parse(args.time_window.as_str())?;
 
     let db_conn = Pool::new(args.mysql_url.as_str())?.get_conn()?;
     let db_conn: Arc<Mutex<mysql::PooledConn>> = Arc::new(Mutex::new(db_conn));
 
     let mut exec_set: JoinSet<()> = JoinSet::new();
 
-    let mut time_tick = TimeTick::new(Duration::new(0, 100000000));
+    let wallet = args.solver_private_key.with_chain_id(args.chain_id);
+
+    println!(
+        "Connecting to the chain with URL {} ...",
+        args.ws_chain_url.as_str()
+    );
+    let provider = Provider::<Ws>::connect(args.ws_chain_url.as_str()).await?;
+    println!("Connected successfully!");
+    let block_time_address = wallet.address();
+    let middleware = Arc::new(provider.with_signer(wallet));
+
+    let meantime_comp = Arc::new(Mutex::new(MeanTime::new(
+        time_sig_pool.clone(),
+        block_time_address,
+        middleware,
+        time_window,
+    )));
+
+    let mut time_tick = TimeTick::new(Duration::new(0, 100000000), meantime_comp);
     exec_set.spawn(async move {
-        time_tick.ticker(time_handler).await;
+        time_tick.ticker().await;
     });
 
     let app = Router::new()
