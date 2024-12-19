@@ -17,16 +17,26 @@ do
         echo "Using dev environment"
         CHAIN_ID=21363
         TIME_WINDOW="2s"
-        WS_CHAIN_URL="wss://service.lestnet.org:8888"
+        WS_CHAIN_URL="wss://service.lestnet.org:8888/"
         TICK_PERIOD="2s"
+        MYSQL_PASSWORD_VERSION=1
+        MYSQL_USER="server"
+        MYSQL_HOST="blockclock_db"
+        MYSQL_PORT=3306
+        MYSQL_DATABASE="timekeeper"
         break
         ;;
     "prod")
         echo "Using prod environment"
         CHAIN_ID=21363
         TIME_WINDOW="2s"
-        WS_CHAIN_URL="wss://service.lestnet.org:8888"
+        WS_CHAIN_URL="wss://service.lestnet.org:8888/"
         TICK_PERIOD="2s"
+        MYSQL_PASSWORD_VERSION=2
+        MYSQL_USER="server"
+        MYSQL_HOST="blockclock_db"
+        MYSQL_PORT=3306
+        MYSQL_DATABASE="timekeeper"
         break
         ;;
     "quit")
@@ -45,9 +55,9 @@ set -e
 
 # Secrets
 cat >.env << ENV
-MYSQL_ROOT_PASSWORD=\$(gcloud secrets versions access 1 --secret="MYSQL_ROOT_PASSWORD_${SECRET_SUFFIX}")
-MYSQL_APP_PASSWORD=\$(gcloud secrets versions access 1 --secret="MYSQL_APP_PASSWORD_${SECRET_SUFFIX}")
-MYSQL_READER_PASSWORD=\$(gcloud secrets versions access 1 --secret="MYSQL_READER_PASSWORD_${SECRET_SUFFIX}")
+MYSQL_ROOT_PASSWORD=\$(gcloud secrets versions access ${MYSQL_PASSWORD_VERSION} --secret="MYSQL_ROOT_PASSWORD_${SECRET_SUFFIX}")
+MYSQL_APP_PASSWORD=\$(gcloud secrets versions access ${MYSQL_PASSWORD_VERSION} --secret="MYSQL_APP_PASSWORD_${SECRET_SUFFIX}")
+MYSQL_READER_PASSWORD=\$(gcloud secrets versions access ${MYSQL_PASSWORD_VERSION} --secret="MYSQL_READER_PASSWORD_${SECRET_SUFFIX}")
 SOLVER_PRIVATE_KEY=\$(gcloud secrets versions access 1 --secret="BLOCKCLOCK_WALLET_PRIVATE_KEY_${SECRET_SUFFIX}")
 
 ENV
@@ -82,7 +92,11 @@ services:
     image: ${SOLVER_DOCKER_IMAGE}
     environment:
       - CHAIN_ID=${CHAIN_ID}
-      - MYSQL_URL=mysql://server:\${MYSQL_APP_PASSWORD}@blockclock_db:3306/timekeeper
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=\${MYSQL_APP_PASSWORD}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_PORT=${MYSQL_PORT}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
       - TIME_WINDOW=${TIME_WINDOW}
       - SOLVER_PRIVATE_KEY=\${SOLVER_PRIVATE_KEY}
       - WS_CHAIN_URL=${WS_CHAIN_URL}

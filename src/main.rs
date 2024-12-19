@@ -33,7 +33,19 @@ pub struct Args {
     pub port: u16,
 
     #[arg(long)]
-    pub mysql_url: String,
+    pub mysql_user: String,
+
+    #[arg(long)]
+    pub mysql_password: String,
+
+    #[arg(long)]
+    pub mysql_host: String,
+
+    #[arg(long, default_value_t = 3306)]
+    pub mysql_port: u16,
+
+    #[arg(long)]
+    pub mysql_database: String,
 
     #[arg(long)]
     pub time_window: String,
@@ -58,7 +70,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let time_window = parse_duration::parse(&args.time_window)?;
     let tick_period = parse_duration::parse(&args.tick_period)?;
 
-    let db_conn = Pool::new(args.mysql_url.as_str())?.get_conn()?;
+    let mysql_url = format!(
+        "mysql://{}:{}@{}:{}/{}",
+        args.mysql_user, args.mysql_password, args.mysql_host, args.mysql_port, args.mysql_database
+    );
+    println!(
+        "Connecting to the database with URL {} ...",
+        mysql_url.to_string()
+    );
+    let db_conn = Pool::new(mysql_url.as_str())?.get_conn()?;
+    println!("Successfully created DB connection.");
     let db_conn: Arc<Mutex<mysql::PooledConn>> = Arc::new(Mutex::new(db_conn));
 
     let mut exec_set: JoinSet<()> = JoinSet::new();
@@ -70,7 +91,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         args.ws_chain_url.as_str()
     );
     let provider = Provider::<Ws>::connect(args.ws_chain_url.as_str()).await?;
-    println!("Connected successfully!");
+    println!("Successfully connected to the chain.");
     let block_time_address = wallet.address();
     let middleware = Arc::new(provider.with_signer(wallet));
 

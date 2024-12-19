@@ -39,16 +39,16 @@ impl Chronicle {
 #[cfg(test)]
 mod tests {
     use super::Chronicle;
-    use ethers::types::{Address, Bytes};
+    use ethers::types::{Address, Bytes, U256};
     use std::str::FromStr;
 
     #[test]
     fn test_verify() -> Result<(), String> {
-        let time_keeper = Bytes::from_str("0x25ee756f5d93e26f5011b7ed4866afb192ce483e").unwrap();
+        let time_keeper = Bytes::from_str("0x807e381C344AcC6af14A75c5E1b8C82a92dE3F68").unwrap();
         let time_sig = Chronicle::new(
-            1234567890.into(),
+            U256::from_dec_str("1734554316445000000").unwrap(),
             Address::from_slice(time_keeper.to_vec().as_slice()),
-            Bytes::from_str("0x72315c2259bd482317373295b6f3985e889fcdea6b50ef7344e89a417f7bf6645aac1039674909c314e02be38dc377997a8ea682b366fe1af9a4eb919815140f1c").unwrap()
+            Bytes::from_str("0xe843cb59fd2f060cbdb887f7b376309387771fee9104468511180742f25b35520ffeea8199087571b601f1c83bb37a5509811482f13d33f37329e2ca8ba728e61c").unwrap()
         );
         assert!(time_sig.verify());
         Ok(())
