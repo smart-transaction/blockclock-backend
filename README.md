@@ -2,6 +2,23 @@
 
 This is a service that provides the blockclock backend and solver functionality.
 
+## Building
+
+1.  Make sure that `docker` abd `gcloud` are installed on your local machine.
+1.  Run `./build_image.sh`.
+    1.  Choose the environment from the prompt Use prod if you're updating the production version.
+    1.  It might ask for logging in to Google account. Use your stxn accounbt for login.
+    1.  The docker image will be built.
+1.  If you encounter error due to a lack of gcloud permissions, ping the gcloud admin, we'll grant necessary permissions.
+
+## Deploying
+
+1.  Modify the `./deploy.sh` script if you need to change some params, e.g. contract addresses.
+1.  Login to the `google cloud console` with your stxn account.
+1.  ssh into the `blockclock-solver` VM.
+1.  Copy the deploy.sh into the default home directory. Replace existing script if it exists.
+1.  Run the ./deploy.sh on the VM 
+
 ## API Description
 
 1.  `/onboard`
