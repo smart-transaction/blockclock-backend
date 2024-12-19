@@ -74,9 +74,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "mysql://{}:{}@{}:{}/{}",
         args.mysql_user, args.mysql_password, args.mysql_host, args.mysql_port, args.mysql_database
     );
+    let mysql_display_url = format!(
+        "mysql://{}:{}@{}:{}/{}",
+        args.mysql_user, "********", args.mysql_host, args.mysql_port, args.mysql_database
+    );
     println!(
         "Connecting to the database with URL {} ...",
-        mysql_url.to_string()
+        mysql_display_url
     );
     let db_conn = Pool::new(mysql_url.as_str())?.get_conn()?;
     println!("Successfully created DB connection.");
