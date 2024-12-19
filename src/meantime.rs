@@ -118,23 +118,21 @@ impl<M: Middleware> MeanTime<M> {
                             if let Some(receipt) = receipt {
                                 if let Some(status) = receipt.status {
                                     println!("Got transaction status: {}", status);
-                                    if status != 0.into() {
-                                        // Sucessful status, update the last signature and drop the pool tail if needed.
-                                        self.curr_md5 = curr_md5;
-                                        let mut pool = self.pool.lock().await;
-                                        let mut truncated_pool: Vec<Chronicle> = pool
-                                            .clone()
-                                            .into_iter()
-                                            .filter(|el| {
-                                                el.epoch
-                                                    >= pool.last().unwrap().epoch
-                                                        - self.time_window.as_nanos()
-                                            })
-                                            .collect();
-                                        // pool.splice(0..pool.len(), truncated_pool);
-                                        pool.clear();
-                                        pool.append(&mut truncated_pool);
-                                    }
+                                    // Sucessful status, update the last signature and drop the pool tail if needed.
+                                    self.curr_md5 = curr_md5;
+                                    let mut pool = self.pool.lock().await;
+                                    let mut truncated_pool: Vec<Chronicle> = pool
+                                        .clone()
+                                        .into_iter()
+                                        .filter(|el| {
+                                            el.epoch
+                                                >= pool.last().unwrap().epoch
+                                                    - self.time_window.as_nanos()
+                                        })
+                                        .collect();
+                                    // pool.splice(0..pool.len(), truncated_pool);
+                                    pool.clear();
+                                    pool.append(&mut truncated_pool);
                                     return;
                                 }
                             }

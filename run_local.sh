@@ -8,6 +8,7 @@ MYSQL_DATABASE=timekeeper
 CHAIN_ID=21363
 TIME_WINDOW=3s
 WS_CHAIN_URL=wss://service.lestnet.org:8888/
+BLOCK_TIME_ADDRESS=0x170b92Ace0641d7525775360e77ae5e960C6F7fb
 TICK_PERIOD=1s
 
 PROJECT_NAME="solver-438012"
@@ -31,4 +32,5 @@ cargo run \
   --mysql-password=${MYSQL_PASSWORD} \
   --mysql-host=${MYSQL_HOST} \
   --mysql-port=${MYSQL_PORT} \
-  --mysql-database=${MYSQL_DATABASE}
+  --mysql-database=${MYSQL_DATABASE} \
+  --block-time-address=${BLOCK_TIME_ADDRESS}

@@ -10,6 +10,7 @@ use ethers::{
     middleware::MiddlewareBuilder,
     providers::{Provider, Ws},
     signers::{LocalWallet, Signer},
+    types::Address,
 };
 use meantime::MeanTime;
 use mysql::Pool;
@@ -60,6 +61,9 @@ pub struct Args {
     pub ws_chain_url: String,
 
     #[arg(long)]
+    pub block_time_address: Address,
+
+    #[arg(long)]
     pub tick_period: String,
 }
 
@@ -96,12 +100,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     let provider = Provider::<Ws>::connect(args.ws_chain_url.as_str()).await?;
     println!("Successfully connected to the chain.");
-    let block_time_address = wallet.address();
     let middleware = Arc::new(provider.with_signer(wallet));
 
     let meantime_comp = Arc::new(Mutex::new(MeanTime::new(
         time_sig_pool.clone(),
-        block_time_address,
+        args.block_time_address,
         middleware,
         time_window,
     )));

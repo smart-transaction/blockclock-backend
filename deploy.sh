@@ -24,6 +24,7 @@ do
         MYSQL_HOST="blockclock_db"
         MYSQL_PORT=3306
         MYSQL_DATABASE="timekeeper"
+        BLOCK_TIME_ADDRESS="0x170b92Ace0641d7525775360e77ae5e960C6F7fb"
         break
         ;;
     "prod")
@@ -37,6 +38,7 @@ do
         MYSQL_HOST="blockclock_db"
         MYSQL_PORT=3306
         MYSQL_DATABASE="timekeeper"
+        BLOCK_TIME_ADDRESS="0x170b92Ace0641d7525775360e77ae5e960C6F7fb"
         break
         ;;
     "quit")
@@ -100,6 +102,7 @@ services:
       - TIME_WINDOW=${TIME_WINDOW}
       - SOLVER_PRIVATE_KEY=\${SOLVER_PRIVATE_KEY}
       - WS_CHAIN_URL=${WS_CHAIN_URL}
+      - BLOCK_TIME_ADDRESS=${BLOCK_TIME_ADDRESS}
       - TICK_PERIOD=${TICK_PERIOD}
     ports:
       - 8000:8000
