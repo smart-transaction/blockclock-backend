@@ -24,7 +24,7 @@ do
         MYSQL_HOST="blockclock_db"
         MYSQL_PORT=3306
         MYSQL_DATABASE="timekeeper"
-        BLOCK_TIME_ADDRESS="0x170b92Ace0641d7525775360e77ae5e960C6F7fb"
+        BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
         break
         ;;
     "prod")
@@ -38,7 +38,7 @@ do
         MYSQL_HOST="blockclock_db"
         MYSQL_PORT=3306
         MYSQL_DATABASE="timekeeper"
-        BLOCK_TIME_ADDRESS="0x170b92Ace0641d7525775360e77ae5e960C6F7fb"
+        BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
         break
         ;;
     "quit")
