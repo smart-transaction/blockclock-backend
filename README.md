@@ -63,3 +63,12 @@ This is a service that provides the blockclock backend and solver functionality.
     The `GET` request, debug output of all existing time signatures in tne memory pool.
 
     Params: None
+5.  `/get_time_margin`
+
+    The `GET` request, returns the current time margin used for mean time computing.
+    Expected response JSON:
+    ```json
+    {
+        "time_marggin": "<margin in nanoseconds>"
+    }
+    ```

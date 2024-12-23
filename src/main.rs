@@ -2,7 +2,7 @@ use std::{error::Error, sync::Arc};
 
 use axum::{
     routing::{get, post},
-    serve, Router,
+    serve, Json, Router,
 };
 use claim_avatar::handle_claim_avatar;
 use clap::Parser;
@@ -15,6 +15,7 @@ use ethers::{
 use meantime::MeanTime;
 use mysql::Pool;
 use onboarding::handle_onboard;
+use serde_json::json;
 use time_pool::{handle_add_time_sig, handle_list_time_sigs, TimeSigPool};
 use timer::TimeTick;
 use tokio::{net::TcpListener, sync::Mutex, task::JoinSet};
@@ -121,6 +122,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             get({
                 let time_sig_pool = Arc::clone(&time_sig_pool);
                 move || handle_list_time_sigs(time_sig_pool)
+            }),
+        )
+        .route(
+            "/get_time_margin",
+            get({
+                let output = Json(json!({
+                    "time_margin": time_window.as_nanos().to_string(),
+                }));
+                move || async { output }
             }),
         )
         .route(
