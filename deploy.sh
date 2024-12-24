@@ -16,7 +16,7 @@ do
     "dev")
         echo "Using dev environment"
         CHAIN_ID=21363
-        TIME_WINDOW="2s"
+        TIME_WINDOW="12s"
         WS_CHAIN_URL="wss://service.lestnet.org:8888/"
         TICK_PERIOD="2s"
         MYSQL_PASSWORD_VERSION=1
@@ -30,7 +30,7 @@ do
     "prod")
         echo "Using prod environment"
         CHAIN_ID=21363
-        TIME_WINDOW="2s"
+        TIME_WINDOW="12s"
         WS_CHAIN_URL="wss://service.lestnet.org:8888/"
         TICK_PERIOD="2s"
         MYSQL_PASSWORD_VERSION=2
