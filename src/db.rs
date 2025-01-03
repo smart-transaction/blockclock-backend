@@ -8,6 +8,7 @@ pub async fn store_user_data(
     addr: &Address,
     avatar: &String,
 ) -> Result<(), Box<dyn Error>> {
+    check_conn(conn);
     let res: Option<String> = conn.exec_first(
         "SELECT address FROM whitelisted_addresses WHERE address = ?",
         (addr.to_string(),),
@@ -26,6 +27,7 @@ pub async fn update_user_data(
     addr: &Address,
     avatar: &String,
 ) -> Result<(), Box<dyn Error>> {
+    check_conn(conn);
     conn.exec_drop(
         "UPDATE whitelisted_addresses SET avatar = ? WHERE address = ?",
         (avatar, addr.to_string()),
@@ -37,6 +39,7 @@ pub async fn is_address_whitelisted(
     conn: &mut Conn,
     addr: &Address,
 ) -> Result<bool, Box<dyn Error>> {
+    check_conn(conn);
     let res: Option<String> = conn.exec_first(
         "SELECT address FROM whitelisted_addresses WHERE address = ?",
         (addr.to_string(),),
@@ -53,6 +56,7 @@ pub async fn is_avatar_available(
     addr: &Address,
     avatar: &String,
 ) -> Result<bool, Box<dyn Error>> {
+    check_conn(conn);
     let res: Option<String> = conn.exec_first(
         "SELECT address FROM whitelisted_addresses WHERE address != ? AND avatar = ?",
         (addr.to_string(), avatar),
@@ -61,4 +65,10 @@ pub async fn is_avatar_available(
         return Ok(false);
     }
     Ok(true)
+}
+
+fn check_conn(conn: &mut Conn) {
+    if let Err(_) = conn.ping() {
+        let _ = conn.reset();
+    }
 }

@@ -92,6 +92,7 @@ services:
   blockclock_solver:
     container_name: blockclock_solver
     image: ${SOLVER_DOCKER_IMAGE}
+    restart: always
     environment:
       - CHAIN_ID=${CHAIN_ID}
       - MYSQL_USER=${MYSQL_USER}
