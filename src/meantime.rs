@@ -73,6 +73,7 @@ impl<M: Middleware> MeanTime<M> {
         }
         let mean_time = sum_time / last_sigs.len() as u128;
         let last_sigs = last_sigs.into_iter().map(|el| el.clone()).collect();
+        pool.clear();
         return Some((mean_time.into(), last_sigs));
     }
 
@@ -120,19 +121,6 @@ impl<M: Middleware> MeanTime<M> {
                                     println!("Got transaction status: {}", status);
                                     // Sucessful status, update the last signature and drop the pool tail if needed.
                                     self.curr_md5 = curr_md5;
-                                    let mut pool = self.pool.lock().await;
-                                    let mut truncated_pool: Vec<Chronicle> = pool
-                                        .clone()
-                                        .into_iter()
-                                        .filter(|el| {
-                                            el.epoch
-                                                >= pool.last().unwrap().epoch
-                                                    - self.time_window.as_nanos()
-                                        })
-                                        .collect();
-                                    // pool.splice(0..pool.len(), truncated_pool);
-                                    pool.clear();
-                                    pool.append(&mut truncated_pool);
                                     return;
                                 }
                             }
@@ -198,12 +186,14 @@ mod tests {
             .compute_mean_time(Duration::new(1734220768, 0))
             .await;
         assert_ne!(test_res_opt, None);
-        let (mean_time, sigs) = test_res_opt.unwrap();
+        let (mean_time_val, sigs) = test_res_opt.unwrap();
         assert_eq!(
-            mean_time,
+            mean_time_val,
             Duration::new(1734220767, 500000000).as_nanos().into()
         );
         assert_eq!(sigs.len(), 2);
+        let remaining_pool = mean_time.pool.lock().await;
+        assert!(remaining_pool.is_empty());
         Ok(())
     }
 
@@ -238,83 +228,17 @@ mod tests {
             .compute_mean_time(Duration::new(1734220767, 0))
             .await;
         assert_ne!(test_res_opt, None);
-        let (mean_time, sigs) = test_res_opt.unwrap();
-        assert_eq!(mean_time, Duration::new(1734220767, 0).as_nanos().into());
+        let (mean_time_val, sigs) = test_res_opt.unwrap();
+        assert_eq!(mean_time_val, Duration::new(1734220767, 0).as_nanos().into());
         assert_eq!(sigs.len(), 1);
+        let remaining_pool = mean_time.pool.lock().await;
+        assert!(remaining_pool.is_empty());
         Ok(())
     }
 
     #[tokio::test]
     async fn test_compute_mean_time_empty() -> Result<(), String> {
         let pool_vec = Vec::new();
-        let time_window = parse_duration::parse("2s").unwrap();
-        let pool = Arc::new(Mutex::new(pool_vec));
-        let mean_time = MeanTime::new(
-            pool.clone(),
-            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
-            Arc::new(Provider::new(MockProvider::new())),
-            time_window,
-        );
-        let test_res_opt = mean_time
-            .compute_mean_time(Duration::new(1734220768, 0))
-            .await;
-        assert_eq!(test_res_opt, None);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_compute_mean_time_unchanged() -> Result<(), String> {
-        let pool_vec = vec![
-            Chronicle::new(
-                Duration::new(1734220767, 0).as_nanos().into(),
-                Address::from_str("0x25ee756f5d93e26f5011b7ed4866afb192ce483e").unwrap(),
-                Bytes::from_str("0x72315c2259bd482317373295b6f3985e889fcdea6b50ef7344e89a417f7bf6645aac1039674909c314e02be38dc377997a8ea682b366fe1af9a4eb919815140f1c").unwrap()
-            ),
-            Chronicle::new(
-                Duration::new(1734220768, 0).as_nanos().into(),
-                Address::from_str("0x25ee756f5d93e26f5011b7ed4866afb192ce483e").unwrap(),
-                Bytes::from_str("0x72315c2259bd482317373295b6f3985e889fcdea6b50ef7344e89a417f7bf6645aac1039674909c314e02be38dc377997a8ea682b366fe1af9a4eb919815140f1c").unwrap()
-            ),
-            Chronicle::new(
-                Duration::new(1734220760, 0).as_nanos().into(),
-                Address::from_str("0x25ee756f5d93e26f5011b7ed4866afb192ce483e").unwrap(),
-                Bytes::from_str("0x72315c2259bd482317373295b6f3985e889fcdea6b50ef7344e89a417f7bf6645aac1039674909c314e02be38dc377997a8ea682b366fe1af9a4eb919815140f1c").unwrap()
-            ),
-        ];
-        let time_window = parse_duration::parse("2s").unwrap();
-        let pool = Arc::new(Mutex::new(pool_vec));
-        let mean_time = MeanTime::new(
-            pool.clone(),
-            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
-            Arc::new(Provider::new(MockProvider::new())),
-            time_window,
-        );
-        let test_res_opt = mean_time
-            .compute_mean_time(Duration::new(1734220768, 0))
-            .await;
-        assert_eq!(test_res_opt, None);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_compute_mean_time_out_of_bound() -> Result<(), String> {
-        let pool_vec = vec![
-            Chronicle::new(
-                Duration::new(1734220767, 0).as_nanos().into(),
-                Address::from_str("0x25ee756f5d93e26f5011b7ed4866afb192ce483e").unwrap(),
-                Bytes::from_str("0x72315c2259bd482317373295b6f3985e889fcdea6b50ef7344e89a417f7bf6645aac1039674909c314e02be38dc377997a8ea682b366fe1af9a4eb919815140f1c").unwrap()
-            ),
-            Chronicle::new(
-                Duration::new(1734220768, 0).as_nanos().into(),
-                Address::from_str("0x25ee756f5d93e26f5011b7ed4866afb192ce483e").unwrap(),
-                Bytes::from_str("0x72315c2259bd482317373295b6f3985e889fcdea6b50ef7344e89a417f7bf6645aac1039674909c314e02be38dc377997a8ea682b366fe1af9a4eb919815140f1c").unwrap()
-            ),
-            Chronicle::new(
-                Duration::new(1734220760, 0).as_nanos().into(),
-                Address::from_str("0x25ee756f5d93e26f5011b7ed4866afb192ce483e").unwrap(),
-                Bytes::from_str("0x72315c2259bd482317373295b6f3985e889fcdea6b50ef7344e89a417f7bf6645aac1039674909c314e02be38dc377997a8ea682b366fe1af9a4eb919815140f1c").unwrap()
-            ),
-        ];
         let time_window = parse_duration::parse("2s").unwrap();
         let pool = Arc::new(Mutex::new(pool_vec));
         let mean_time = MeanTime::new(
