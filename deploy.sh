@@ -107,6 +107,11 @@ services:
       - TICK_PERIOD=${TICK_PERIOD}
     ports:
       - 8000:8000
+    logging:
+      driver: "local"
+      options:
+        max-size: 100m
+        max-file: "15"
 
   blockclock_db:
     container_name: blockclock_db

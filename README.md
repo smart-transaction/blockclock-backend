@@ -69,6 +69,15 @@ This is a service that provides the blockclock backend and solver functionality.
     Expected response JSON:
     ```json
     {
-        "time_marggin": "<margin in nanoseconds>"
+        "time_margin": "<margin in nanoseconds>"
+    }
+    ```
+6.  `/get_time_keepers_count`
+
+    The `GET` request, returns a number of time keepers contributing to the blockclock.
+    Expected response JSON example:
+    ```json
+    {
+        "count": 42
     }
     ```

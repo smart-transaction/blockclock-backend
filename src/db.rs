@@ -67,6 +67,16 @@ pub async fn is_avatar_available(
     Ok(true)
 }
 
+pub async fn get_time_keepers_count(conn: &mut Conn) -> Result<u64, Box<dyn Error>> {
+    check_conn(conn);
+    let res: Option<u64> =
+        conn.exec_first("SELECT count(address) FROM whitelisted_addresses", ())?;
+    if let Some(tk_count) = res {
+        return Ok(tk_count);
+    }
+    Ok(0)
+}
+
 fn check_conn(conn: &mut Conn) {
     if let Err(_) = conn.ping() {
         let _ = conn.reset();

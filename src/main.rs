@@ -12,6 +12,7 @@ use ethers::{
     signers::{LocalWallet, Signer},
     types::Address,
 };
+use get_time_keepers::handle_get_time_keepers;
 use meantime::MeanTime;
 use mysql::Pool;
 use onboarding::handle_onboard;
@@ -22,6 +23,7 @@ use tokio::{net::TcpListener, sync::Mutex, task::JoinSet};
 
 mod claim_avatar;
 mod db;
+mod get_time_keepers;
 mod meantime;
 mod onboarding;
 mod time_pool;
@@ -153,6 +155,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             post({
                 let db_conn = Arc::clone(&db_conn);
                 move |input| handle_onboard(input, db_conn)
+            }),
+        )
+        .route(
+            "/get_time_keepers_count",
+            get({
+                let db_conn = Arc::clone(&db_conn);
+                move || handle_get_time_keepers(db_conn)
             }),
         );
 
