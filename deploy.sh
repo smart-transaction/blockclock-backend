@@ -18,7 +18,7 @@ do
         CHAIN_ID=21363
         TIME_WINDOW="12s"
         WS_CHAIN_URL="wss://service.lestnet.org:8888/"
-        TICK_PERIOD="2s"
+        TICK_PERIOD="100ms"
         MYSQL_PASSWORD_VERSION=1
         MYSQL_USER="server"
         MYSQL_HOST="blockclock_db"
@@ -32,7 +32,7 @@ do
         CHAIN_ID=21363
         TIME_WINDOW="12s"
         WS_CHAIN_URL="wss://service.lestnet.org:8888/"
-        TICK_PERIOD="2s"
+        TICK_PERIOD="100ms"
         MYSQL_PASSWORD_VERSION=2
         MYSQL_USER="server"
         MYSQL_HOST="blockclock_db"
@@ -93,6 +93,9 @@ services:
     container_name: blockclock_solver
     image: ${SOLVER_DOCKER_IMAGE}
     restart: unless-stopped
+    depends_on:
+      blockclock_db:
+        condition: service_started
     environment:
       - CHAIN_ID=${CHAIN_ID}
       - MYSQL_USER=${MYSQL_USER}
@@ -116,6 +119,7 @@ services:
   blockclock_db:
     container_name: blockclock_db
     image: ${DB_DOCKER_IMAGE}
+    restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=\${MYSQL_ROOT_PASSWORD}
       - MYSQL_APP_PASSWORD=\${MYSQL_APP_PASSWORD}
