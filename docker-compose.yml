@@ -1,0 +1,16 @@
+services:
+  mysql_db:
+    container_name: mysql_db
+    image: us-central1-docker.pkg.dev/solver-438012/solver-docker-repo/blockclock-db-image:live
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret1
+      - MYSQL_APP_PASSWORD=secret2
+      - MYSQL_READER_PASSWORD=secret3
+    volumes:
+      - mysql:/var/lib/mysql
+    ports:
+      - 3306:3306
+
+volumes:
+  mysql:

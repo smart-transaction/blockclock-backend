@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::{
-    db::{is_avatar_available, update_user_data},
+    db::{is_avatar_available, update_avatar},
     user_data::UserData,
 };
 
@@ -31,7 +31,7 @@ pub async fn handle_claim_avatar(
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }
-    match update_user_data(
+    match update_avatar(
         db_conn.as_mut(),
         &input_json.time_keeper,
         &input_json.avatar,

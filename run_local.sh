@@ -1,5 +1,4 @@
 PORT=8000
-MYSQL_URL=mysql://server:secret2@localhost:3306/timekeeper
 MYSQL_USER=server
 MYSQL_PASSWORD=secret2
 MYSQL_HOST=localhost

@@ -8,8 +8,18 @@ USE timekeeper;
 CREATE TABLE IF NOT EXISTS whitelisted_addresses (
   address VARCHAR(255),
   avatar VARCHAR(255),
+  referral_code CHAR(32),
+  referred_from VARCHAR(32),
   PRIMARY KEY (address),
-  UNIQUE INDEX avatar_idx(avatar)
+  UNIQUE INDEX avatar_idx(avatar),
+  UNIQUE INDEX referral_code_idx(referral_code)
+);
+
+CREATE TABLE IF NOT EXISTS referrals(
+  refkey CHAR(128) NOT NULL,
+  refvalue CHAR(32),
+  PRIMARY KEY (refkey),
+  INDEX ref_idx (refvalue)
 );
 
 -- Create the user.

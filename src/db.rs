@@ -3,10 +3,13 @@ use std::error::Error;
 use ethers::types::Address;
 use mysql::{prelude::Queryable, Conn};
 
+use crate::referral::ReferralData;
+
 pub async fn store_user_data(
     conn: &mut Conn,
     addr: &Address,
     avatar: &String,
+    referral_code: &String,
 ) -> Result<(), Box<dyn Error>> {
     check_conn(conn);
     let res: Option<String> = conn.exec_first(
@@ -15,14 +18,14 @@ pub async fn store_user_data(
     )?;
     if res == None {
         conn.exec_drop(
-            "INSERT INTO whitelisted_addresses (address, avatar) VALUES (?, ?)",
-            (addr.to_string(), avatar),
+            "INSERT INTO whitelisted_addresses (address, avatar, referral_code) VALUES (?, ?, ?)",
+            (addr.to_string(), avatar, referral_code),
         )?;
     }
     Ok(())
 }
 
-pub async fn update_user_data(
+pub async fn update_avatar(
     conn: &mut Conn,
     addr: &Address,
     avatar: &String,
@@ -81,4 +84,30 @@ fn check_conn(conn: &mut Conn) {
     if let Err(_) = conn.ping() {
         let _ = conn.reset();
     }
+}
+
+pub fn read_referral(conn: &mut Conn, ref_key: &String) -> Result<String, Box<dyn Error>> {
+    check_conn(conn);
+    let res: Option<String> = conn.exec_first(
+        "SELECT refvalue FROM referrals WHERE refkey = ?",
+        (ref_key,),
+    )?;
+    if let Some(ref_val) = res {
+        return Ok(ref_val);
+    }
+    Ok(String::new())
+}
+
+pub fn write_referral(
+    conn: &mut Conn,
+    ref_data: &ReferralData,
+) -> Result<(), Box<dyn Error>> {
+    check_conn(conn);
+    if read_referral(conn, &ref_data.refkey)?.is_empty() {
+        conn.exec_drop(
+            "INSERT INTO referrals (refkey, refvalue) VALUES (?, ?)",
+            (&ref_data.refkey, &ref_data.refvalue),
+        )?;
+    }
+    Ok(())
 }
