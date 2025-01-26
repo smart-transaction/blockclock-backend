@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     sync::Arc,
     time::{Duration, SystemTime},
 };
@@ -9,9 +10,12 @@ use ethers::{
     utils::parse_units,
 };
 use md5::{Context, Digest};
+use mysql::PooledConn;
 use tokio::sync::Mutex;
 
 use crate::{
+    address_str::get_address_strings,
+    db::read_referrers_list,
     time_pool::TimeSigPool,
     time_signature::{BlockTime, Chronicle},
 };
@@ -23,7 +27,7 @@ pub struct MeanTime<M> {
     curr_md5: Digest,
 }
 
-const TIME_KEEPER_REWARD: i32 = 1;
+const TIME_KEEPER_REWARD: f64 = 1.0;
 
 impl<M: Middleware> MeanTime<M> {
     pub fn new(
@@ -77,7 +81,7 @@ impl<M: Middleware> MeanTime<M> {
         return Some((mean_time.into(), last_sigs));
     }
 
-    pub async fn handle_time_tick(&mut self, curr_ts: SystemTime) {
+    pub async fn handle_time_tick(&mut self, curr_ts: SystemTime, conn: Arc<Mutex<PooledConn>>) {
         // Get mean time
         let curr_ts_epoch = curr_ts.duration_since(SystemTime::UNIX_EPOCH).unwrap();
         if let Some((mean_time, last_sigs)) = self.compute_mean_time(curr_ts_epoch).await {
@@ -95,19 +99,41 @@ impl<M: Middleware> MeanTime<M> {
                 return;
             }
             // Send the mean time and signatures to the contract
-            let receivers: Vec<Address> = last_sigs
-                .clone()
-                .into_iter()
-                .map(|el| el.time_keeper)
-                .collect();
-            let amount: U256 = parse_units(TIME_KEEPER_REWARD, "ether")
-                .ok()
-                .unwrap()
-                .into();
-            let amounts: Vec<U256> = vec![amount; receivers.len()];
+            let mut accounts_and_amounts =
+                last_sigs
+                    .as_slice()
+                    .iter()
+                    .fold(BTreeMap::new(), |mut acc, el| {
+                        let (account, trunc_account) = get_address_strings(&el.time_keeper);
+                        acc.insert(account, TIME_KEEPER_REWARD);
+                        acc.insert(trunc_account, TIME_KEEPER_REWARD);
+                        acc
+                    });
+
+            {
+                let mut conn = conn.lock().await;
+                if let Err(err) =
+                    read_referrers_list(conn.as_mut(), &mut accounts_and_amounts).await
+                {
+                    println!("Error getting referrers: {}", err);
+                    return;
+                }
+            }
+            let (all_receivers, all_amounts) =
+                accounts_and_amounts
+                    .into_iter()
+                    .fold((Vec::new(), Vec::new()), |mut acc: (Vec<Address>, Vec<U256>), el| {
+                        if let Ok(account) = el.0.parse::<Address>() {
+                            acc.0.push(account);
+                            if let Ok(amount) = parse_units(el.1, "ether") {
+                                acc.1.push(amount.into());
+                            }
+                        }
+                        acc
+                    });
             match self
                 .block_time_contract
-                .move_time(last_sigs.clone(), mean_time, receivers, amounts)
+                .move_time(last_sigs.clone(), mean_time, all_receivers, all_amounts)
                 .gas(10000000)
                 .send()
                 .await
@@ -229,7 +255,10 @@ mod tests {
             .await;
         assert_ne!(test_res_opt, None);
         let (mean_time_val, sigs) = test_res_opt.unwrap();
-        assert_eq!(mean_time_val, Duration::new(1734220767, 0).as_nanos().into());
+        assert_eq!(
+            mean_time_val,
+            Duration::new(1734220767, 0).as_nanos().into()
+        );
         assert_eq!(sigs.len(), 1);
         let remaining_pool = mean_time.pool.lock().await;
         assert!(remaining_pool.is_empty());

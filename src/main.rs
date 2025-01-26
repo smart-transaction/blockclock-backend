@@ -1,7 +1,12 @@
 use std::{error::Error, sync::Arc};
 
 use axum::{
-    http::{header::{ACCEPT, ACCEPT_LANGUAGE, CONTENT_LANGUAGE, CONTENT_TYPE}, Method}, routing::{get, post}, serve, Json, Router
+    http::{
+        header::{ACCEPT, ACCEPT_LANGUAGE, CONTENT_LANGUAGE, CONTENT_TYPE},
+        Method,
+    },
+    routing::{get, post},
+    serve, Json, Router,
 };
 use claim_avatar::handle_claim_avatar;
 use clap::Parser;
@@ -21,7 +26,9 @@ use time_pool::{handle_add_time_sig, handle_list_time_sigs, TimeSigPool};
 use timer::TimeTick;
 use tokio::{net::TcpListener, sync::Mutex, task::JoinSet};
 use tower_http::cors::{Any, CorsLayer};
+use update_referred_from::handle_update_referred_from;
 
+mod address_str;
 mod claim_avatar;
 mod db;
 mod get_time_keepers;
@@ -31,6 +38,7 @@ mod referral;
 mod time_pool;
 mod time_signature;
 mod timer;
+mod update_referred_from;
 mod user_data;
 
 #[derive(Parser, Debug)]
@@ -114,7 +122,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         time_window,
     )));
 
-    let mut time_tick = TimeTick::new(tick_period, meantime_comp);
+    let mut time_tick = TimeTick::new(tick_period, meantime_comp, db_conn.clone());
     exec_set.spawn(async move {
         time_tick.ticker().await;
     });
@@ -162,6 +170,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             post({
                 let db_conn = Arc::clone(&db_conn);
                 move |input| handle_onboard(input, db_conn)
+            }),
+        )
+        .route(
+            "/update_referred_from", 
+            post({
+                let db_conn = Arc::clone(&db_conn);
+                move |input| handle_update_referred_from(input, db_conn)
             }),
         )
         .route(

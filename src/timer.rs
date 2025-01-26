@@ -4,6 +4,7 @@ use std::{
 };
 
 use ethers::providers::Middleware;
+use mysql::PooledConn;
 use tokio::{spawn, sync::Mutex, time::interval};
 
 use crate::meantime::MeanTime;
@@ -11,13 +12,15 @@ use crate::meantime::MeanTime;
 pub struct TimeTick<M> {
     period: Duration,
     mean_time: Arc<Mutex<MeanTime<M>>>,
+    conn: Arc<Mutex<PooledConn>>,
 }
 
 impl<M: Middleware + 'static> TimeTick<M> {
-    pub fn new(period: Duration, mean_time: Arc<Mutex<MeanTime<M>>>) -> TimeTick<M> {
+    pub fn new(period: Duration, mean_time: Arc<Mutex<MeanTime<M>>>, conn: Arc<Mutex<PooledConn>>) -> TimeTick<M> {
         TimeTick {
             period,
             mean_time,
+            conn,
         }
     }
 
@@ -26,9 +29,10 @@ impl<M: Middleware + 'static> TimeTick<M> {
         loop {
             delay.tick().await;
             let mean_time = self.mean_time.clone();
+            let conn = self.conn.clone();
             spawn(async move {
                 if let Ok(mut mean_time) = mean_time.try_lock() {
-                    mean_time.handle_time_tick(SystemTime::now()).await;
+                    mean_time.handle_time_tick(SystemTime::now(), conn).await;
                 }
             });
         }
