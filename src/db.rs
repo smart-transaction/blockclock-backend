@@ -8,6 +8,20 @@ use mysql::{prelude::Queryable, Conn};
 
 use crate::{address_str::get_address_strings, referral::ReferralData};
 
+// Fixes an invalid address in the addresses db. Replaces a short display address with a full one.
+pub async fn fix_address(
+    conn: &mut Conn,
+    addr: &Address,
+) -> Result<(), Box<dyn Error>> {
+    check_conn(conn);
+    let(full_addr, short_addr) = get_address_strings(&addr);
+    conn.exec_drop(
+        "UPDATE whitelisted_addresses SET address = ? WHERE address = ?",
+        (full_addr, short_addr),
+    )?;
+    Ok(())
+}
+
 pub async fn store_user_data(
     conn: &mut Conn,
     addr: &Address,
@@ -16,7 +30,6 @@ pub async fn store_user_data(
 ) -> Result<(), Box<dyn Error>> {
     check_conn(conn);
     let (address, trunc_address) = get_address_strings(addr);
-    println!("{}, {}", address, trunc_address);
     let res: Option<String> = conn.exec_first(
         "SELECT address FROM whitelisted_addresses WHERE address = ? OR address = ?",
         (&address, trunc_address),
@@ -83,7 +96,7 @@ pub async fn is_avatar_available(
     check_conn(conn);
     let (address, trunc_address) = get_address_strings(addr);
     let res: Option<String> = conn.exec_first(
-        "SELECT address FROM whitelisted_addresses WHERE address != ? AND address != ? AND avatar = ?",
+        "SELECT address FROM whitelisted_addresses WHERE (address != ? AND address != ?) AND avatar = ?",
         (address, trunc_address, avatar),
     )?;
     if let Some(_) = res {

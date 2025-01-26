@@ -42,13 +42,13 @@ mod tests {
     use ethers::types::{Address, Bytes, U256};
     use std::str::FromStr;
 
-    #[test]
-    fn test_verify() -> Result<(), String> {
-        let time_keeper = Bytes::from_str("0x807e381C344AcC6af14A75c5E1b8C82a92dE3F68").unwrap();
+    #[tokio::test]
+    async fn test_verify() -> Result<(), String> {
+        let time_keeper = Address::from_str("0x2c57d1CFC6d5f8E4182a56b4cf75421472eBAEa4").unwrap();
         let time_sig = Chronicle::new(
             U256::from_dec_str("1734554316445000000").unwrap(),
-            Address::from_slice(time_keeper.to_vec().as_slice()),
-            Bytes::from_str("0xe843cb59fd2f060cbdb887f7b376309387771fee9104468511180742f25b35520ffeea8199087571b601f1c83bb37a5509811482f13d33f37329e2ca8ba728e61c").unwrap()
+            time_keeper,
+            Bytes::from_str("0x99d6d06c0e655a617cb043aed547410d7575466ffe36f907d410b03ea7e63e2456ddeace270811317fc1360678f682124944e76484e1019d7c1f5b8cdfb91c131b").unwrap()
         );
         assert!(time_sig.verify());
         Ok(())
