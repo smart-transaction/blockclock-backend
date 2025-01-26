@@ -5,6 +5,24 @@ use mysql::{prelude::Queryable, Conn};
 
 use crate::referral::ReferralData;
 
+fn get_full_and_short_addr_str(addr: &Address) -> (String, String) {
+    (format!("{:#x}", addr), addr.to_string())
+}
+
+// Fixes an invalid address in the addresses db. Replaces a short display address with a full one.
+pub async fn fix_address(
+    conn: &mut Conn,
+    addr: &Address,
+) -> Result<(), Box<dyn Error>> {
+    check_conn(conn);
+    let(full_addr, short_addr) = get_full_and_short_addr_str(&addr);
+    conn.exec_drop(
+        "UPDATE whitelisted_addresses SET address = ? WHERE address = ?",
+        (full_addr, short_addr),
+    )?;
+    Ok(())
+}
+
 pub async fn store_user_data(
     conn: &mut Conn,
     addr: &Address,
@@ -12,14 +30,15 @@ pub async fn store_user_data(
     referral_code: &String,
 ) -> Result<(), Box<dyn Error>> {
     check_conn(conn);
+    let(full_addr, short_addr) = get_full_and_short_addr_str(&addr);
     let res: Option<String> = conn.exec_first(
-        "SELECT address FROM whitelisted_addresses WHERE address = ?",
-        (addr.to_string(),),
+        "SELECT address FROM whitelisted_addresses WHERE address = ? OR address = ?",
+        (&full_addr, &short_addr),
     )?;
     if res == None {
         conn.exec_drop(
             "INSERT INTO whitelisted_addresses (address, avatar, referral_code) VALUES (?, ?, ?)",
-            (addr.to_string(), avatar, referral_code),
+            (full_addr, avatar, referral_code),
         )?;
     }
     Ok(())
@@ -31,9 +50,10 @@ pub async fn update_avatar(
     avatar: &String,
 ) -> Result<(), Box<dyn Error>> {
     check_conn(conn);
+    let(full_addr, short_addr) = get_full_and_short_addr_str(&addr);
     conn.exec_drop(
-        "UPDATE whitelisted_addresses SET avatar = ? WHERE address = ?",
-        (avatar, addr.to_string()),
+        "UPDATE whitelisted_addresses SET avatar = ? WHERE address = ? OR address = ?",
+        (avatar, full_addr, short_addr),
     )?;
     Ok(())
 }
@@ -43,9 +63,10 @@ pub async fn is_address_whitelisted(
     addr: &Address,
 ) -> Result<bool, Box<dyn Error>> {
     check_conn(conn);
+    let(full_addr, short_addr) = get_full_and_short_addr_str(&addr);
     let res: Option<String> = conn.exec_first(
-        "SELECT address FROM whitelisted_addresses WHERE address = ?",
-        (addr.to_string(),),
+        "SELECT address FROM whitelisted_addresses WHERE address = ? OR address = ?",
+        (full_addr, short_addr),
     )?;
     if let Some(_) = res {
         return Ok(true);
@@ -60,9 +81,10 @@ pub async fn is_avatar_available(
     avatar: &String,
 ) -> Result<bool, Box<dyn Error>> {
     check_conn(conn);
+    let(full_addr, short_addr) = get_full_and_short_addr_str(&addr);
     let res: Option<String> = conn.exec_first(
-        "SELECT address FROM whitelisted_addresses WHERE address != ? AND avatar = ?",
-        (addr.to_string(), avatar),
+        "SELECT address FROM whitelisted_addresses WHERE (address != ? AND address != ?) AND avatar = ?",
+        (full_addr, short_addr, avatar),
     )?;
     if let Some(_) = res {
         return Ok(false);

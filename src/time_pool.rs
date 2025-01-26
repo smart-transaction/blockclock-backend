@@ -6,7 +6,7 @@ use mysql::PooledConn;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-use crate::{db::is_address_whitelisted, time_signature::Chronicle};
+use crate::{db::{fix_address, is_address_whitelisted}, time_signature::Chronicle};
 
 pub type TimeSigPool = Vec<Chronicle>;
 
@@ -55,6 +55,12 @@ pub async fn handle_add_time_sig(
     let time_signature =
         Chronicle::new(epoch.unwrap(), time_keeper.unwrap(), signature.unwrap());
     if time_signature.verify() {
+        // Update the address in the database, fix the display address error.
+        let mut db_conn = db_conn.lock().await;
+        if let Err(err) = fix_address(db_conn.as_mut(), &time_signature.time_keeper).await {
+            println!("Error fixing address: {}", err);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);            
+        }
         let mut time_sig_pool = pool.lock().await;
         time_sig_pool.push(time_signature);
         return Ok(());
