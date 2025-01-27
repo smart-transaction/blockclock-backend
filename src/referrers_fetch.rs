@@ -45,7 +45,6 @@ pub async fn read_referrers_list(
                 AND NULLIF(a1.referred_from, '') IS NOT NULL",
             vec!["?"; ref_accounts.len()].join(",")
         );
-        println!("{}", stmt);
         let result = conn.exec_iter(stmt, ref_accounts.keys().collect::<Vec<_>>())?;
         for row_res in result {
             let row_res = row_res?;
@@ -55,7 +54,7 @@ pub async fn read_referrers_list(
             let referral_code_res: Option<String> = row_res.get(2);
             if let Some(referral_code) = referral_code_res {
                 if visited_refs.insert(referral_code) {
-                    //Inserting the found account if no cyclic referral detected.
+                    // Inserting the found account if no cyclic referral detected.
                     if let Some(src_account) = src_account_res {
                         if let Some(ref_account) = ref_account_res {
                             // Compute rewards amount from the source one.
