@@ -14,10 +14,7 @@ use mysql::PooledConn;
 use tokio::sync::Mutex;
 
 use crate::{
-    address_str::get_address_strings,
-    db::read_referrers_list,
-    time_pool::TimeSigPool,
-    time_signature::{BlockTime, Chronicle},
+    address_str::get_address_strings, referrers_fetch::read_referrers_list, time_pool::TimeSigPool, time_signature::{BlockTime, Chronicle}
 };
 
 pub struct MeanTime<M> {
@@ -104,9 +101,8 @@ impl<M: Middleware> MeanTime<M> {
                     .as_slice()
                     .iter()
                     .fold(BTreeMap::new(), |mut acc, el| {
-                        let (account, trunc_account) = get_address_strings(&el.time_keeper);
+                        let (account, _) = get_address_strings(&el.time_keeper);
                         acc.insert(account, TIME_KEEPER_REWARD);
-                        acc.insert(trunc_account, TIME_KEEPER_REWARD);
                         acc
                     });
 

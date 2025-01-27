@@ -8,3 +8,21 @@ pub struct UserData {
     pub referral_code: String,
     pub referred_from: String,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AvatarData {
+    pub time_keeper: Address,
+    pub avatar: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ReferralCodeData {
+    pub time_keeper: Address,
+    pub referral_code: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ReferredFromData {
+    pub time_keeper: Address,
+    pub referred_from: String,
+}

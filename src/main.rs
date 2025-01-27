@@ -21,12 +21,12 @@ use meantime::MeanTime;
 use mysql::Pool;
 use onboarding::handle_onboard;
 use referral::{handle_read_referral, handle_write_referral};
+use referral_code::{handle_update_referral_code, handle_update_referred_from};
 use serde_json::json;
 use time_pool::{handle_add_time_sig, handle_list_time_sigs, TimeSigPool};
 use timer::TimeTick;
 use tokio::{net::TcpListener, sync::Mutex, task::JoinSet};
 use tower_http::cors::{Any, CorsLayer};
-use update_referred_from::handle_update_referred_from;
 
 mod address_str;
 mod claim_avatar;
@@ -35,10 +35,11 @@ mod get_time_keepers;
 mod meantime;
 mod onboarding;
 mod referral;
+mod referral_code;
+mod referrers_fetch;
 mod time_pool;
 mod time_signature;
 mod timer;
-mod update_referred_from;
 mod user_data;
 
 #[derive(Parser, Debug)]
@@ -173,7 +174,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }),
         )
         .route(
-            "/update_referred_from", 
+            "/update_referral_code",
+            post({
+                let db_conn = Arc::clone(&db_conn);
+                move |input| handle_update_referral_code(input, db_conn)
+            }),
+        )
+        .route(
+            "/update_referred_from",
             post({
                 let db_conn = Arc::clone(&db_conn);
                 move |input| handle_update_referred_from(input, db_conn)
