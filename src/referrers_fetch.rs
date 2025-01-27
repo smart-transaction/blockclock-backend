@@ -15,13 +15,14 @@ pub async fn read_referrers_list(
 
     // Detect cyclic references, put referral codes of source accounts into visited;
     let mut visited_refs = HashSet::new();
+
     let stmt = format!(
         "SELECT referral_code
             FROM whitelisted_addresses
-            WHERE address IN({})",
+            WHERE address IN({})
+            AND NULLIF(referral_code, '') IS NOT NULL",
         vec!["?"; total_accounts.len()].join(",")
     );
-    println!("{}", stmt);
     let first_result = conn.exec_iter(stmt, total_accounts.keys().collect::<Vec<_>>())?;
     for row_res in first_result {
         let row_res = row_res?;
