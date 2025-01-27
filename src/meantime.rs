@@ -14,7 +14,10 @@ use mysql::PooledConn;
 use tokio::sync::Mutex;
 
 use crate::{
-    address_str::get_address_strings, referrers_fetch::read_referrers_list, time_pool::TimeSigPool, time_signature::{BlockTime, Chronicle}
+    address_str::get_address_strings,
+    referrers_fetch::read_referrers_list,
+    time_pool::TimeSigPool,
+    time_signature::{BlockTime, Chronicle},
 };
 
 pub struct MeanTime<M> {
@@ -115,18 +118,18 @@ impl<M: Middleware> MeanTime<M> {
                     return;
                 }
             }
-            let (all_receivers, all_amounts) =
-                accounts_and_amounts
-                    .into_iter()
-                    .fold((Vec::new(), Vec::new()), |mut acc: (Vec<Address>, Vec<U256>), el| {
-                        if let Ok(account) = el.0.parse::<Address>() {
-                            acc.0.push(account);
-                            if let Ok(amount) = parse_units(el.1, "ether") {
-                                acc.1.push(amount.into());
-                            }
+            let (all_receivers, all_amounts) = accounts_and_amounts.into_iter().fold(
+                (Vec::new(), Vec::new()),
+                |mut acc: (Vec<Address>, Vec<U256>), el| {
+                    if let Ok(account) = el.0.parse::<Address>() {
+                        acc.0.push(account);
+                        if let Ok(amount) = parse_units(el.1, "ether") {
+                            acc.1.push(amount.into());
                         }
-                        acc
-                    });
+                    }
+                    acc
+                },
+            );
             match self
                 .block_time_contract
                 .move_time(last_sigs.clone(), mean_time, all_receivers, all_amounts)

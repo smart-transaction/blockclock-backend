@@ -63,13 +63,11 @@ pub async fn read_referrers_list(
                                 // Insert referral rewards or append it for case of multiple referrals
                                 match next_ref_accounts.get(&ref_account) {
                                     Some(amount) => {
-                                        next_ref_accounts
-                                            .insert(ref_account, amount + new_amount);
+                                        next_ref_accounts.insert(ref_account, amount + new_amount);
                                     }
                                     None => {
-                                        next_ref_accounts
-                                            .insert(ref_account, new_amount);
-                                        }
+                                        next_ref_accounts.insert(ref_account, new_amount);
+                                    }
                                 }
                             }
                         }

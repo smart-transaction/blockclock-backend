@@ -6,12 +6,9 @@ use mysql::{prelude::Queryable, Conn};
 use crate::{address_str::get_address_strings, referral::ReferralData};
 
 // Fixes an invalid address in the addresses db. Replaces a short display address with a full one.
-pub async fn fix_address(
-    conn: &mut Conn,
-    addr: &Address,
-) -> Result<(), Box<dyn Error>> {
+pub async fn fix_address(conn: &mut Conn, addr: &Address) -> Result<(), Box<dyn Error>> {
     check_conn(conn);
-    let(full_addr, short_addr) = get_address_strings(&addr);
+    let (full_addr, short_addr) = get_address_strings(&addr);
     conn.exec_drop(
         "UPDATE whitelisted_addresses SET address = ? WHERE address = ?",
         (full_addr, short_addr),

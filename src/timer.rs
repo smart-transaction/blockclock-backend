@@ -16,7 +16,11 @@ pub struct TimeTick<M> {
 }
 
 impl<M: Middleware + 'static> TimeTick<M> {
-    pub fn new(period: Duration, mean_time: Arc<Mutex<MeanTime<M>>>, conn: Arc<Mutex<PooledConn>>) -> TimeTick<M> {
+    pub fn new(
+        period: Duration,
+        mean_time: Arc<Mutex<MeanTime<M>>>,
+        conn: Arc<Mutex<PooledConn>>,
+    ) -> TimeTick<M> {
         TimeTick {
             period,
             mean_time,
