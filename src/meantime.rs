@@ -105,7 +105,14 @@ impl<M: Middleware> MeanTime<M> {
                     .iter()
                     .fold(BTreeMap::new(), |mut acc, el| {
                         let (account, _) = get_address_strings(&el.time_keeper);
-                        acc.insert(account, TIME_KEEPER_REWARD);
+                        match acc.get(&account) {
+                            Some(amount) => {
+                                acc.insert(account, amount + TIME_KEEPER_REWARD);
+                            }
+                            None => {
+                                acc.insert(account, TIME_KEEPER_REWARD);
+                            }
+                        }
                         acc
                     });
 

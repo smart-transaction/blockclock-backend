@@ -26,7 +26,7 @@ pub async fn handle_read_referral(
                 }));
             }
             Err(err) => {
-                println!("Error storing the referral: {}", err);
+                println!("Error reading the referral: {}", err);
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
         }
@@ -38,9 +38,11 @@ pub async fn handle_write_referral(
     input_json: Json<ReferralData>,
     db_conn: Arc<Mutex<mysql::PooledConn>>,
 ) -> Result<(), StatusCode> {
+    println!("Write referral: {:#?}", input_json.0);
     let mut db_conn = db_conn.lock().await;
     match write_referral(db_conn.as_mut(), &input_json.0) {
         Ok(_) => {
+            println!("Ok");
             return Ok(());
         }
         Err(err) => {

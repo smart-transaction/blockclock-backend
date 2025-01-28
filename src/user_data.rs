@@ -5,8 +5,6 @@ use serde::{Deserialize, Serialize};
 pub struct UserData {
     pub time_keeper: Address,
     pub avatar: String,
-    pub referral_code: String,
-    pub referred_from: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

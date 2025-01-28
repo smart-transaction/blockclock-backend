@@ -35,7 +35,6 @@ pub async fn read_referrers_list(
     let mut ref_accounts: BTreeMap<String, f64> = total_accounts.clone();
     loop {
         let mut next_ref_accounts: BTreeMap<String, f64> = BTreeMap::new();
-        println!("{:?}", ref_accounts);
         let stmt = format!(
             "SELECT a1.address, a2.address, a2.referral_code
                 FROM whitelisted_addresses AS a1
@@ -82,7 +81,6 @@ pub async fn read_referrers_list(
         total_accounts.append(&mut next_ref_accounts);
         level += 1;
     }
-    println!("{:#?}", total_accounts);
     Ok(())
 }
 

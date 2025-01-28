@@ -4,7 +4,7 @@ This is a service that provides the blockclock backend and solver functionality.
 
 ## Building
 
-1.  Make sure that `docker` abd `gcloud` are installed on your local machine.
+1.  Make sure that `docker` and `gcloud` are installed on your local machine.
 1.  Run `./build_image.sh`.
     1.  Choose the environment from the prompt Use prod if you're updating the production version.
     1.  It might ask for logging in to Google account. Use your stxn accounbt for login.
@@ -31,8 +31,6 @@ This is a service that provides the blockclock backend and solver functionality.
     {
 	    "time_keeper": "<time_keeper_address>",
 	    "avatar": "<time_keeper_name>",
-        "referral_code": "<This time keeper's referral_code>",
-        "referred_from": "<Referrer's referral_code>"
     }
     ```
 1.  `/add_time_sig`

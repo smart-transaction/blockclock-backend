@@ -15,7 +15,6 @@ pub async fn handle_onboard(
         db_conn.as_mut(),
         &input_json.time_keeper,
         &input_json.avatar,
-        &input_json.referral_code,
     )
     .await
     {

@@ -20,7 +20,6 @@ pub async fn store_user_data(
     conn: &mut Conn,
     addr: &Address,
     avatar: &String,
-    referral_code: &String,
 ) -> Result<(), Box<dyn Error>> {
     check_conn(conn);
     let (address, trunc_address) = get_address_strings(addr);
@@ -30,8 +29,8 @@ pub async fn store_user_data(
     )?;
     if res == None {
         conn.exec_drop(
-            "INSERT INTO whitelisted_addresses (address, avatar, referral_code) VALUES (?, ?, ?)",
-            (address, avatar, referral_code),
+            "INSERT INTO whitelisted_addresses (address, avatar) VALUES (?, ?)",
+            (address, avatar),
         )?;
     }
     Ok(())
