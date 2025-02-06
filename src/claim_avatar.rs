@@ -13,7 +13,6 @@ pub async fn handle_claim_avatar(
     input_json: Json<AvatarData>,
     db_conn: Arc<Mutex<PooledConn>>,
 ) -> Result<(), StatusCode> {
-    let avatar = input_json.avatar.clone();
     let mut db_conn = db_conn.lock().await;
     match is_avatar_available(
         db_conn.as_mut(),
