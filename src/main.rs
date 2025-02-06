@@ -17,6 +17,7 @@ use ethers::{
     types::Address,
 };
 use get_time_keepers::handle_get_time_keepers;
+use log::{info, Level};
 use meantime::MeanTime;
 use mysql::Pool;
 use onboarding::handle_onboard;
@@ -88,6 +89,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let time_window = parse_duration::parse(&args.time_window)?;
     let tick_period = parse_duration::parse(&args.tick_period)?;
 
+    stderrlog::new()
+        .verbosity(Level::Info)
+        .timestamp(stderrlog::Timestamp::Millisecond)
+        .init()
+        .unwrap();
+
     let mysql_url = format!(
         "mysql://{}:{}@{}:{}/{}",
         args.mysql_user, args.mysql_password, args.mysql_host, args.mysql_port, args.mysql_database
@@ -96,24 +103,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "mysql://{}:{}@{}:{}/{}",
         args.mysql_user, "********", args.mysql_host, args.mysql_port, args.mysql_database
     );
-    println!(
+    info!(
         "Connecting to the database with URL {} ...",
         mysql_display_url
     );
     let db_conn = Pool::new(mysql_url.as_str())?.get_conn()?;
-    println!("Successfully created DB connection.");
+    info!("Successfully created DB connection.");
     let db_conn: Arc<Mutex<mysql::PooledConn>> = Arc::new(Mutex::new(db_conn));
 
     let mut exec_set: JoinSet<()> = JoinSet::new();
 
     let wallet = args.solver_private_key.with_chain_id(args.chain_id);
 
-    println!(
+    info!(
         "Connecting to the chain with URL {} ...",
         args.ws_chain_url.as_str()
     );
     let provider = Provider::<Ws>::connect(args.ws_chain_url.as_str()).await?;
-    println!("Successfully connected to the chain.");
+    info!("Successfully connected to the chain.");
     let middleware = Arc::new(provider.with_signer(wallet));
 
     let meantime_comp = Arc::new(Mutex::new(MeanTime::new(
@@ -214,7 +221,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await
         .unwrap();
 
-    println!("Starting server at port {}", args.port);
+    info!("Starting server at port {}", args.port);
     serve(tcp_listener, app).await.unwrap();
     Ok(())
 }

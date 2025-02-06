@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::{http::StatusCode, Json};
+use log::error;
 use mysql::PooledConn;
 use tokio::sync::Mutex;
 
@@ -19,7 +20,7 @@ pub async fn handle_update_referral_code(
             return Ok(());
         }
         Err(err) => {
-            println!("Error updating referral code: {}", err);
+            error!("Error updating referral code: {}", err);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }
@@ -35,7 +36,7 @@ pub async fn handle_update_referred_from(
             return Ok(());
         }
         Err(err) => {
-            println!("Error updating referred from: {}", err);
+            error!("Error updating referred from: {}", err);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }

@@ -2,6 +2,7 @@ use std::{str::FromStr, sync::Arc};
 
 use axum::{http::StatusCode, Json};
 use ethers::types::{Address, Bytes, U256};
+use log::error;
 use mysql::PooledConn;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
@@ -29,15 +30,15 @@ pub async fn handle_add_time_sig(
     let time_keeper = Address::from_str(&input.time_keeper);
     let signature = Bytes::from_str(&input.signature);
     if let Err(err) = epoch {
-        println!("Error extracting epoch: {}", err);
+        error!("Error extracting epoch: {}", err);
         return Err(StatusCode::BAD_REQUEST);
     }
     if let Err(err) = time_keeper {
-        println!("Error extracting time keeper: {}", err);
+        error!("Error extracting time keeper: {}", err);
         return Err(StatusCode::BAD_REQUEST);
     }
     if let Err(err) = signature {
-        println!("Error extracting signature: {}", err);
+        error!("Error extracting signature: {}", err);
         return Err(StatusCode::BAD_REQUEST);
     }
     {
@@ -45,12 +46,12 @@ pub async fn handle_add_time_sig(
         match is_address_whitelisted(db_conn.as_mut(), &time_keeper.unwrap()).await {
             Ok(res) => {
                 if !res {
-                    println!("The address {} isn't whitelisted", time_keeper.unwrap());
+                    error!("The address {} isn't whitelisted", time_keeper.unwrap());
                     return Err(StatusCode::UNAUTHORIZED);
                 }
             }
             Err(err) => {
-                println!("Error checking time keepers whitelist: {}", err);
+                error!("Error checking time keepers whitelist: {}", err);
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
         }
@@ -60,7 +61,7 @@ pub async fn handle_add_time_sig(
         // Update the address in the database, fix the display address error.
         let mut db_conn = db_conn.lock().await;
         if let Err(err) = fix_address(db_conn.as_mut(), &time_signature.time_keeper).await {
-            println!("Error fixing address: {}", err);
+            error!("Error fixing address: {}", err);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
         let mut time_sig_pool = pool.lock().await;

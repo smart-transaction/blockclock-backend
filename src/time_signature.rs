@@ -2,6 +2,7 @@ use ethers::{
     prelude::abigen,
     types::{Address, Bytes, Signature, U256},
 };
+use log::error;
 
 abigen!(
   BlockTime,
@@ -23,13 +24,13 @@ impl Chronicle {
         match Signature::try_from(self.signature.to_vec().as_slice()) {
             Ok(signature) => {
                 if let Err(err) = signature.verify(self.epoch.to_string(), self.time_keeper) {
-                    println!("Error signature verification: {}", err);
+                    error!("Error signature verification: {}", err);
                     return false;
                 }
                 return true;
             }
             Err(err) => {
-                println!("Error parsing signature: {}", err);
+                error!("Error parsing signature: {}", err);
                 return false;
             }
         }

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::{http::StatusCode, Json};
+use log::error;
 use mysql::PooledConn;
 use tokio::sync::Mutex;
 
@@ -22,7 +23,7 @@ pub async fn handle_onboard(
             return Ok(());
         }
         Err(err) => {
-            println!("Error storing whilelisted address: {}", err);
+            error!("Error storing whilelisted address: {}", err);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }

@@ -9,6 +9,7 @@ use ethers::{
     types::{Address, U256},
     utils::parse_units,
 };
+use log::{error, info};
 use md5::{Context, Digest};
 use mysql::PooledConn;
 use tokio::sync::Mutex;
@@ -121,7 +122,7 @@ impl<M: Middleware> MeanTime<M> {
                 if let Err(err) =
                     read_referrers_list(conn.as_mut(), &mut accounts_and_amounts).await
                 {
-                    println!("Error getting referrers: {}", err);
+                    error!("Error getting referrers: {}", err);
                     return;
                 }
             }
@@ -145,28 +146,28 @@ impl<M: Middleware> MeanTime<M> {
                 .await
             {
                 Ok(pending) => {
-                    println!("Transaction is sent, txhash: {}", pending.tx_hash());
+                    info!("Transaction is sent, txhash: {}", pending.tx_hash());
                     match pending.await {
                         Ok(receipt) => {
                             if let Some(receipt) = receipt {
                                 if let Some(status) = receipt.status {
-                                    println!("Got transaction status: {}", status);
+                                    info!("Got transaction status: {}", status);
                                     // Sucessful status, update the last signature and drop the pool tail if needed.
                                     self.curr_md5 = curr_md5;
                                     return;
                                 }
                             }
-                            println!("Transaction status wasn't received.");
+                            error!("Transaction status wasn't received.");
                             return;
                         }
                         Err(err) => {
-                            println!("Error pending transaction: {}", err);
+                            error!("Error pending transaction: {}", err);
                             return;
                         }
                     }
                 }
                 Err(err) => {
-                    println!("Error sending transaction: {}", err);
+                    error!("Error sending transaction: {}", err);
                 }
             }
         }

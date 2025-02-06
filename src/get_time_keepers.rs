@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::{http::StatusCode, Json};
+use log::error;
 use mysql::PooledConn;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
@@ -19,7 +20,7 @@ pub async fn handle_get_time_keepers(
     match get_time_keepers_count(conn.as_mut()).await {
         Ok(tk_count) => Ok(Json(TimeKeepersStats { count: tk_count })),
         Err(err) => {
-            println!("Error getting time keepers: {}", err);
+            error!("Error getting time keepers: {}", err);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }

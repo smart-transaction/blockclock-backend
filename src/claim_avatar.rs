@@ -1,4 +1,5 @@
 use axum::{http::StatusCode, Json};
+use log::*;
 use mysql::PooledConn;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -12,6 +13,7 @@ pub async fn handle_claim_avatar(
     input_json: Json<AvatarData>,
     db_conn: Arc<Mutex<PooledConn>>,
 ) -> Result<(), StatusCode> {
+    let avatar = input_json.avatar.clone();
     let mut db_conn = db_conn.lock().await;
     match is_avatar_available(
         db_conn.as_mut(),
@@ -22,12 +24,12 @@ pub async fn handle_claim_avatar(
     {
         Ok(is_avail) => {
             if !is_avail {
-                println!("The avatar {} is already in use", input_json.avatar);
+                error!("The avatar {} is already in use", input_json.avatar);
                 return Err(StatusCode::CONFLICT);
             }
         }
         Err(err) => {
-            println!("Error checking the avatar: {}", err);
+            error!("Error checking the avatar: {}", err);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }
@@ -42,7 +44,7 @@ pub async fn handle_claim_avatar(
             return Ok(());
         }
         Err(err) => {
-            println!("Error updating the avatar: {}", err);
+            error!("Error updating the avatar: {}", err);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }

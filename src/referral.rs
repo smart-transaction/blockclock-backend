@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use axum::{extract::Query, http::StatusCode, Json};
+use log::error;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
@@ -26,7 +27,7 @@ pub async fn handle_read_referral(
                 }));
             }
             Err(err) => {
-                println!("Error reading the referral: {}", err);
+                error!("Error reading the referral: {}", err);
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
         }
@@ -44,7 +45,7 @@ pub async fn handle_write_referral(
             return Ok(());
         }
         Err(err) => {
-            println!("Error storing the referral: {}", err);
+            error!("Error storing the referral: {}", err);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }
