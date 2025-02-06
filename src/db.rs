@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use ethers::types::Address;
-use mysql::{prelude::Queryable, Conn};
+use mysql::{prelude::Queryable, Conn, FromRowError};
 
 use crate::{address_str::get_address_strings, referral::ReferralData};
 
@@ -57,16 +57,18 @@ pub async fn update_referral_code(
 ) -> Result<(), Box<dyn Error>> {
     check_conn(conn);
     let (address, trunc_address) = get_address_strings(addr);
-    let res: Option<String> = conn.exec_first(
-        "SELECT referral_code FROM whitelisted_addresses WHERE (address = ? OR address = ?) AND NULLIF(referral_code, '') IS NOT NULL",
+    let res: Option<Result<String, FromRowError>> = conn.exec_first_opt(
+        "SELECT referral_code FROM whitelisted_addresses WHERE (address = ? OR address = ?)",
         (&address, &trunc_address),
     )?;
-    if let Some(existing_ref_code) = res {
-        conn.exec_drop(
-            "UPDATE whitelisted_addresses SET referred_from = ? WHERE referred_from = ?",
-            (referral_code, existing_ref_code),
-        )?;
+    if let Some(existing_ref_code_res) = res {
+        if let Ok(existing_ref_code) = existing_ref_code_res {
+            conn.exec_drop(
+                "UPDATE whitelisted_addresses SET referred_from = ? WHERE referred_from = ?",
+                (referral_code, existing_ref_code),
+            )?;
         }
+    }
     conn.exec_drop(
         "UPDATE whitelisted_addresses SET address = ?, referral_code = ? WHERE address = ? OR address = ?",
         (&address, referral_code, &address, trunc_address),
