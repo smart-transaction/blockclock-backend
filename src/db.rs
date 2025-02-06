@@ -58,7 +58,7 @@ pub async fn update_referral_code(
     check_conn(conn);
     let (address, trunc_address) = get_address_strings(addr);
     let res: Option<String> = conn.exec_first(
-        "SELECT referral_code FROM whitelisted_addresses WHERE address = ? OR address = ?",
+        "SELECT referral_code FROM whitelisted_addresses WHERE (address = ? OR address = ?) AND NULLIF(referral_code, '') IS NOT NULL",
         (&address, &trunc_address),
     )?;
     if let Some(existing_ref_code) = res {
