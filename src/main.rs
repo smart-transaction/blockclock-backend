@@ -24,6 +24,7 @@ use onboarding::handle_onboard;
 use referral::{handle_read_referral, handle_write_referral};
 use referral_code::{handle_update_referral_code, handle_update_referred_from};
 use serde_json::json;
+use stderrlog::Timestamp;
 use time_pool::{handle_add_time_sig, handle_list_time_sigs, TimeSigPool};
 use timer::TimeTick;
 use tokio::{net::TcpListener, sync::Mutex, task::JoinSet};
@@ -91,7 +92,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     stderrlog::new()
         .verbosity(Level::Info)
-        .timestamp(stderrlog::Timestamp::Millisecond)
+        .timestamp(Timestamp::Millisecond)
         .init()
         .unwrap();
 
