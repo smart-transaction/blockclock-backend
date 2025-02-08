@@ -64,7 +64,7 @@ SOLVER_PRIVATE_KEY=\$(gcloud secrets versions access 1 --secret="BLOCKCLOCK_WALL
 
 ENV
 
-sudo docker-compose up -d --remove-orphans
+sudo docker compose up -d --remove-orphans
 
 rm -f .env
 
@@ -74,7 +74,7 @@ sudo chmod a+x up.sh
 
 cat >down.sh << DOWN
 # Turn down solver.
-sudo docker-compose down
+sudo docker compose down
 DOWN
 sudo chmod a+x down.sh
 
