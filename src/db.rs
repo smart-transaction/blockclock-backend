@@ -124,6 +124,24 @@ pub async fn is_avatar_available(
     Ok(true)
 }
 
+pub async fn is_referral_code_available(
+    conn: &mut Conn,
+    addr: &Address,
+    referral_code: &String
+) -> Result<bool, Box<dyn Error>> {
+    check_conn(conn);
+
+    let (address, trunc_address) = get_address_strings(addr);
+    let res: Option<String> = conn.exec_first(
+        "SELECT address FROM whitelisted_addresses WHERE referral_code = ? AND (address != ? AND address != ?)",
+        (referral_code, address, trunc_address),
+    )?;
+    if let Some(_) = res {
+        return Ok(false);
+    }
+    Ok(true)
+}
+
 pub async fn get_time_keepers_count(conn: &mut Conn) -> Result<u64, Box<dyn Error>> {
     check_conn(conn);
     let res: Option<u64> =

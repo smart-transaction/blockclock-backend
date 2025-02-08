@@ -40,10 +40,12 @@ if [ "${PROJECT_NAME}" != "${CURRENT_PROJECT}" ]; then
   gcloud config set project ${PROJECT_NAME}
 fi
 
-echo "Building and pushing docker image..."
-gcloud builds submit \
-  --region=${CLOUD_REGION} \
-  --tag ${DOCKER_TAG}:${BUILD_VERSION}
+if [ "${OPT}" == "dev" ]; then
+  echo "Building and pushing docker image..."
+  gcloud builds submit \
+    --region=${CLOUD_REGION} \
+    --tag ${DOCKER_TAG}:${BUILD_VERSION}
+fi
 
 echo "Tagging Docker image as current ${OPT}..."
 gcloud artifacts docker tags add ${DOCKER_TAG}:${BUILD_VERSION} ${DOCKER_TAG}:${OPT}

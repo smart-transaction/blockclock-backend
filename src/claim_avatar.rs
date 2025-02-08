@@ -23,7 +23,7 @@ pub async fn handle_claim_avatar(
     {
         Ok(is_avail) => {
             if !is_avail {
-                error!("The avatar {} is already in use", input_json.avatar);
+                warn!("The avatar {} is already in use", input_json.avatar);
                 return Err(StatusCode::CONFLICT);
             }
         }
