@@ -23,12 +23,14 @@ done
 
 . .version
 
-# Increase version build number
-BUILD=$(echo ${BUILD_VERSION} | cut -f 3 -d ".")
-VER=$(echo ${BUILD_VERSION} | cut -f 1,2 -d ".")
-BUILD=$((${BUILD} + 1))
-BUILD_VERSION="${VER}.${BUILD}"
-echo "BUILD_VERSION=${BUILD_VERSION}" > .version
+# Increment version build number
+if [ "${OPT}" == "dev" ]; then
+  BUILD=$(echo ${BUILD_VERSION} | cut -f 3 -d ".")
+  VER=$(echo ${BUILD_VERSION} | cut -f 1,2 -d ".")
+  BUILD=$((${BUILD} + 1))
+  BUILD_VERSION="${VER}.${BUILD}"
+  echo "BUILD_VERSION=${BUILD_VERSION}" > .version
+fi
 
 echo "Running docker build for version ${BUILD_VERSION}"
 
