@@ -24,4 +24,20 @@ RUN update-ca-certificates
 COPY --from=builder /usr/local/cargo/bin/blockclock-backend /usr/local/bin/blockclock-backend
 
 EXPOSE 8000/tcp
-CMD "blockclock-backend" "--port=8000" "--chain-id=${CHAIN_ID}" "--mysql-user=${MYSQL_USER}" "--mysql-password=${MYSQL_PASSWORD}" "--mysql-host=${MYSQL_HOST}" "--mysql-port=${MYSQL_PORT}" "--mysql-database=${MYSQL_DATABASE}" "--time-window=${TIME_WINDOW}" "--solver-private-key=${SOLVER_PRIVATE_KEY}" "--ws-chain-url=${WS_CHAIN_URL}" "--block-time-address=${BLOCK_TIME_ADDRESS}" "--tick-period=${TICK_PERIOD}"
+CMD \
+   "blockclock-backend" \
+   "--port=8000" \
+   "--mysql-user=${MYSQL_USER}" \
+   "--mysql-password=${MYSQL_PASSWORD}" \
+   "--mysql-host=${MYSQL_HOST}" \
+   "--mysql-port=${MYSQL_PORT}" \
+   "--mysql-database=${MYSQL_DATABASE}" \
+   "--time-window=${TIME_WINDOW}" \
+   "--solver-private-key=${SOLVER_PRIVATE_KEY}" \
+   "--primary-chain-id=${PRIMARY_CHAIN_ID}" \
+   "--primary-http-chain-url=${PRIMARY_HTTP_CHAIN_URL}" \
+   "--primary-block-time-address=${PRIMARY_BLOCK_TIME_ADDRESS}" \
+   "--secondary-chain-id=${SECONDARY_CHAIN_ID}" \
+   "--secondary-http-chain-url=${SECONDARY_HTTP_CHAIN_URL}" \
+   "--secondary-block-time-address=${SECONDARY_BLOCK_TIME_ADDRESS}" \
+   "--tick-period=${TICK_PERIOD}"

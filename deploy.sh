@@ -15,30 +15,36 @@ do
   case ${OPT} in
     "dev")
         echo "Using dev environment"
-        CHAIN_ID=21363
         TIME_WINDOW="12s"
-        WS_CHAIN_URL="wss://service.lestnet.org:8888/"
         TICK_PERIOD="100ms"
         MYSQL_PASSWORD_VERSION=1
         MYSQL_USER="server"
         MYSQL_HOST="blockclock_db"
         MYSQL_PORT=3306
         MYSQL_DATABASE="timekeeper"
-        BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
+        PRIMARY_CHAIN_ID=21363
+        PRIMARY_HTTP_CHAIN_URL="https://service.lestnet.org"
+        PRIMARY_BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
+        SECONDARY_CHAIN_ID=84532
+        SECONDARY_HTTP_CHAIN_URL="https://sepolia.base.org"
+        SECONDARY_BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
         break
         ;;
     "prod")
         echo "Using prod environment"
-        CHAIN_ID=21363
         TIME_WINDOW="12s"
-        WS_CHAIN_URL="wss://service.lestnet.org:8888/"
         TICK_PERIOD="100ms"
         MYSQL_PASSWORD_VERSION=2
         MYSQL_USER="server"
         MYSQL_HOST="blockclock_db"
         MYSQL_PORT=3306
         MYSQL_DATABASE="timekeeper"
-        BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
+        PRIMARY_CHAIN_ID=21363
+        PRIMARY_HTTP_CHAIN_URL="https://service.lestnet.org"
+        PRIMARY_BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
+        SECONDARY_CHAIN_ID=84532
+        SECONDARY_HTTP_CHAIN_URL="https://sepolia.base.org"
+        SECONDARY_BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
         break
         ;;
     "quit")

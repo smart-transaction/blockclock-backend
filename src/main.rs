@@ -12,7 +12,7 @@ use claim_avatar::handle_claim_avatar;
 use clap::Parser;
 use ethers::{
     middleware::MiddlewareBuilder,
-    providers::{Provider, Ws},
+    providers::{Http, Provider},
     signers::{LocalWallet, Signer},
     types::Address,
 };
@@ -71,13 +71,22 @@ pub struct Args {
     pub solver_private_key: LocalWallet,
 
     #[arg(long)]
-    pub chain_id: u64,
+    pub primary_chain_id: u64,
 
     #[arg(long)]
-    pub ws_chain_url: String,
+    pub primary_http_chain_url: String,
 
     #[arg(long)]
-    pub block_time_address: Address,
+    pub secondary_chain_id: u64,
+
+    #[arg(long)]
+    pub secondary_http_chain_url: String,
+
+    #[arg(long)]
+    pub primary_block_time_address: Address,
+
+    #[arg(long)]
+    pub secondary_block_time_address: Address,
 
     #[arg(long)]
     pub tick_period: String,
@@ -114,20 +123,42 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut exec_set: JoinSet<()> = JoinSet::new();
 
-    let wallet = args.solver_private_key.with_chain_id(args.chain_id);
+    let primary_wallet = args
+        .solver_private_key
+        .clone()
+        .with_chain_id(args.primary_chain_id);
+    let secondary_wallet = args.solver_private_key.with_chain_id(args.secondary_chain_id);
+
+    info!("Using primary wallet {}", format!("{:#x}", primary_wallet.address()));
+    info!("Using secondary wallet {}", format!("{:#x}", primary_wallet.address()));
 
     info!(
-        "Connecting to the chain with URL {} ...",
-        args.ws_chain_url.as_str()
+        "Connecting to the primary chain with URL {} ...",
+        args.primary_http_chain_url.as_str()
     );
-    let provider = Provider::<Ws>::connect(args.ws_chain_url.as_str()).await?;
-    info!("Successfully connected to the chain.");
-    let middleware = Arc::new(provider.with_signer(wallet));
+    let primary_provider = Provider::<Http>::try_from(args.primary_http_chain_url.as_str())?;
+    info!(
+        "Successfully connected to the primary chain {}.",
+        args.primary_chain_id
+    );
+    info!(
+        "Connecting to the secondary chain with URL {} ...",
+        args.secondary_http_chain_url.as_str()
+    );
+    let secondary_provider = Provider::<Http>::try_from(args.secondary_http_chain_url.as_str())?;
+    info!(
+        "Successfully connected to the secondary chain {}.",
+        args.secondary_chain_id
+    );
+    let primary_middleware = Arc::new(primary_provider.with_signer(primary_wallet));
+    let secondary_middleware = Arc::new(secondary_provider.with_signer(secondary_wallet));
 
     let meantime_comp = Arc::new(Mutex::new(MeanTime::new(
         time_sig_pool.clone(),
-        args.block_time_address,
-        middleware,
+        args.primary_block_time_address,
+        args.secondary_block_time_address,
+        primary_middleware,
+        secondary_middleware,
         time_window,
     )));
 

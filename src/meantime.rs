@@ -12,7 +12,7 @@ use ethers::{
 use log::{error, info};
 use md5::{Context, Digest};
 use mysql::PooledConn;
-use tokio::sync::Mutex;
+use tokio::{spawn, sync::Mutex};
 
 use crate::{
     address_str::get_address_strings,
@@ -23,23 +23,72 @@ use crate::{
 
 pub struct MeanTime<M> {
     pool: Arc<Mutex<TimeSigPool>>,
-    block_time_contract: BlockTime<M>,
+    primary_block_time_contract: BlockTime<M>,
+    secondary_block_time_contract: BlockTime<M>,
     time_window: Duration,
     curr_md5: Digest,
 }
 
 const TIME_KEEPER_REWARD: f64 = 1.0;
 
-impl<M: Middleware> MeanTime<M> {
+async fn send_rewards<M: Middleware>(
+    block_time_contract: BlockTime<M>,
+    last_sigs: Vec<Chronicle>,
+    mean_time: U256,
+    all_receivers: Vec<Address>,
+    all_amounts: Vec<U256>,
+) -> bool {
+    match block_time_contract
+        .move_time(last_sigs.clone(), mean_time, all_receivers, all_amounts)
+        .gas(10000000)
+        .send()
+        .await
+    {
+        Ok(pending) => {
+            info!("Transaction is sent, txhash: {}", pending.tx_hash());
+            match pending.await {
+                Ok(receipt) => {
+                    if let Some(receipt) = receipt {
+                        if let Some(status) = receipt.status {
+                            info!("Got transaction status: {}", status);
+                            return true;
+                        }
+                    }
+                    error!("Transaction status wasn't received.");
+                    return false;
+                }
+                Err(err) => {
+                    error!("Error pending transaction: {}", err);
+                    return false;
+                }
+            }
+        }
+        Err(err) => {
+            error!("Error sending transaction: {}", err);
+            return false;
+        }
+    }
+}
+
+impl<M: Middleware + 'static> MeanTime<M> {
     pub fn new(
         pool: Arc<Mutex<TimeSigPool>>,
-        block_time_address: Address,
-        middleware: Arc<M>,
+        primary_block_time_address: Address,
+        secondary_block_time_address: Address,
+        primary_middleware: Arc<M>,
+        secondary_middleware: Arc<M>,
         time_window: Duration,
     ) -> MeanTime<M> {
         MeanTime {
             pool,
-            block_time_contract: BlockTime::new(block_time_address, middleware),
+            primary_block_time_contract: BlockTime::new(
+                primary_block_time_address,
+                primary_middleware,
+            ),
+            secondary_block_time_contract: BlockTime::new(
+                secondary_block_time_address,
+                secondary_middleware,
+            ),
             time_window,
             curr_md5: md5::compute("--dummy--"),
         }
@@ -138,37 +187,43 @@ impl<M: Middleware> MeanTime<M> {
                     acc
                 },
             );
-            match self
-                .block_time_contract
-                .move_time(last_sigs.clone(), mean_time, all_receivers, all_amounts)
-                .gas(10000000)
-                .send()
-                .await
-            {
-                Ok(pending) => {
-                    info!("Transaction is sent, txhash: {}", pending.tx_hash());
-                    match pending.await {
-                        Ok(receipt) => {
-                            if let Some(receipt) = receipt {
-                                if let Some(status) = receipt.status {
-                                    info!("Got transaction status: {}", status);
-                                    // Sucessful status, update the last signature and drop the pool tail if needed.
-                                    self.curr_md5 = curr_md5;
-                                    return;
-                                }
-                            }
-                            error!("Transaction status wasn't received.");
-                            return;
-                        }
-                        Err(err) => {
-                            error!("Error pending transaction: {}", err);
-                            return;
-                        }
+
+            let primary_last_sigs = last_sigs.clone();
+            let primary_all_receivers = all_receivers.clone();
+            let primary_all_amounts = all_amounts.clone();
+            let primary_contract = self.primary_block_time_contract.clone();
+            let primary_handle = spawn(async move {
+                return send_rewards(
+                    primary_contract,
+                    primary_last_sigs,
+                    mean_time,
+                    primary_all_receivers,
+                    primary_all_amounts,
+                )
+                .await;
+            });
+
+            let secondary_contract = self.secondary_block_time_contract.clone();
+            let secondary_handle = spawn(async move {
+                return send_rewards(
+                    secondary_contract,
+                    last_sigs,
+                    mean_time,
+                    all_receivers,
+                    all_amounts,
+                )
+                .await;
+            });
+            match primary_handle.await {
+                Ok(success) => {
+                    if success {
+                        self.curr_md5 = curr_md5;
                     }
                 }
-                Err(err) => {
-                    error!("Error sending transaction: {}", err);
-                }
+                Err(err) => error!("Error executing the primary awards disbursement: {}", err),
+            }
+            if let Err(err) = secondary_handle.await {
+                error!("Error executing the secondary awards disbursement: {}", err)
             }
         }
     }
@@ -212,6 +267,8 @@ mod tests {
         let mean_time = MeanTime::new(
             pool.clone(),
             Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Arc::new(Provider::new(MockProvider::new())),
             Arc::new(Provider::new(MockProvider::new())),
             time_window,
         );
@@ -254,6 +311,8 @@ mod tests {
         let mean_time = MeanTime::new(
             pool.clone(),
             Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Arc::new(Provider::new(MockProvider::new())),
             Arc::new(Provider::new(MockProvider::new())),
             time_window,
         );
@@ -280,6 +339,8 @@ mod tests {
         let mean_time = MeanTime::new(
             pool.clone(),
             Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Arc::new(Provider::new(MockProvider::new())),
             Arc::new(Provider::new(MockProvider::new())),
             time_window,
         );

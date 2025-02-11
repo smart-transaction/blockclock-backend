@@ -4,10 +4,13 @@ MYSQL_PASSWORD=secret2
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_DATABASE=timekeeper
-CHAIN_ID=21363
 TIME_WINDOW=3s
-WS_CHAIN_URL=wss://service.lestnet.org:8888/
-BLOCK_TIME_ADDRESS=0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80
+PRIMARY_CHAIN_ID=21363
+PRIMARY_HTTP_CHAIN_URL=https://service.lestnet.org
+PRIMARY_BLOCK_TIME_ADDRESS=0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80
+SECONDARY_CHAIN_ID=84532
+SECONDARY_HTTP_CHAIN_URL=https://sepolia.base.org
+SECONDARY_BLOCK_TIME_ADDRESS=0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80
 TICK_PERIOD=1s
 
 PROJECT_NAME="solver-438012"
@@ -17,19 +20,22 @@ if [ "${PROJECT_NAME}" != "${CURRENT_PROJECT}" ]; then
   gcloud config set project ${PROJECT_NAME}
 fi
 
-SOLVER_PRIVATE_KEY=$(gcloud secrets versions access 1 --secret="LOCAL_BLOCKCLOCK_WALLET_PRIVATE_KEY_DEV")
+SOLVER_PRIVATE_KEY=$(gcloud secrets versions access 1 --secret="BLOCKCLOCK_WALLET_PRIVATE_KEY_PROD")
 
 cargo run \
   -- \
   --port=${PORT} \
-  --chain-id=${CHAIN_ID} \
   --time-window=${TIME_WINDOW} \
   --solver-private-key=${SOLVER_PRIVATE_KEY} \
-  --ws-chain-url=${WS_CHAIN_URL} \
   --tick-period=${TICK_PERIOD} \
   --mysql-user=${MYSQL_USER} \
   --mysql-password=${MYSQL_PASSWORD} \
   --mysql-host=${MYSQL_HOST} \
   --mysql-port=${MYSQL_PORT} \
   --mysql-database=${MYSQL_DATABASE} \
-  --block-time-address=${BLOCK_TIME_ADDRESS}
+  --primary-chain-id=${PRIMARY_CHAIN_ID} \
+  --primary-http-chain-url=${PRIMARY_HTTP_CHAIN_URL} \
+  --primary-block-time-address=${PRIMARY_BLOCK_TIME_ADDRESS} \
+  --secondary-chain-id=${SECONDARY_CHAIN_ID} \
+  --secondary-http-chain-url=${SECONDARY_HTTP_CHAIN_URL} \
+  --secondary-block-time-address=${SECONDARY_BLOCK_TIME_ADDRESS}
