@@ -28,6 +28,7 @@ do
         SECONDARY_CHAIN_ID=84532
         SECONDARY_HTTP_CHAIN_URL="https://sepolia.base.org"
         SECONDARY_BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
+        DRY_RUN="true"
         break
         ;;
     "prod")
@@ -45,6 +46,7 @@ do
         SECONDARY_CHAIN_ID=84532
         SECONDARY_HTTP_CHAIN_URL="https://sepolia.base.org"
         SECONDARY_BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
+        DRY_RUN="true"
         break
         ;;
     "quit")
@@ -117,6 +119,7 @@ services:
       - PRIMARY_BLOCK_TIME_ADDRESS=${PRIMARY_BLOCK_TIME_ADDRESS}
       - SECONDARY_BLOCK_TIME_ADDRESS=${SECONDARY_BLOCK_TIME_ADDRESS}
       - TICK_PERIOD=${TICK_PERIOD}
+      - DRY_RUN=${DRY_RUN}
     ports:
       - 8000:8000
     logging:

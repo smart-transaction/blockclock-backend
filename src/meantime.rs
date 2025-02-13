@@ -27,6 +27,7 @@ pub struct MeanTime<M> {
     secondary_block_time_contract: BlockTime<M>,
     time_window: Duration,
     curr_md5: Digest,
+    is_dry_run: bool,
 }
 
 const TIME_KEEPER_REWARD: f64 = 1.0;
@@ -78,6 +79,7 @@ impl<M: Middleware + 'static> MeanTime<M> {
         primary_middleware: Arc<M>,
         secondary_middleware: Arc<M>,
         time_window: Duration,
+        is_dry_run: bool,
     ) -> MeanTime<M> {
         MeanTime {
             pool,
@@ -91,6 +93,7 @@ impl<M: Middleware + 'static> MeanTime<M> {
             ),
             time_window,
             curr_md5: md5::compute("--dummy--"),
+            is_dry_run,
         }
     }
 
@@ -187,7 +190,14 @@ impl<M: Middleware + 'static> MeanTime<M> {
                     acc
                 },
             );
-
+            // Added for suspending rewards during airdrop.
+            if self.is_dry_run {
+                info!(
+                    "Skipping sending rewards due to dry_run mode, skipped rewards:\n{:#?} {:#?}",
+                    all_receivers, all_amounts
+                );
+                return;
+            }
             let primary_last_sigs = last_sigs.clone();
             let primary_all_receivers = all_receivers.clone();
             let primary_all_amounts = all_amounts.clone();
@@ -271,6 +281,7 @@ mod tests {
             Arc::new(Provider::new(MockProvider::new())),
             Arc::new(Provider::new(MockProvider::new())),
             time_window,
+            false,
         );
         let test_res_opt = mean_time
             .compute_mean_time(Duration::new(1734220768, 0))
@@ -315,6 +326,7 @@ mod tests {
             Arc::new(Provider::new(MockProvider::new())),
             Arc::new(Provider::new(MockProvider::new())),
             time_window,
+            false,
         );
         let test_res_opt = mean_time
             .compute_mean_time(Duration::new(1734220767, 0))
@@ -343,6 +355,7 @@ mod tests {
             Arc::new(Provider::new(MockProvider::new())),
             Arc::new(Provider::new(MockProvider::new())),
             time_window,
+            false,
         );
         let test_res_opt = mean_time
             .compute_mean_time(Duration::new(1734220768, 0))

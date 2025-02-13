@@ -21,6 +21,8 @@ do
   esac
 done
 
+test -d target && rm -rf target
+
 . .version
 
 # Increment version build number
@@ -30,6 +32,7 @@ if [ "${OPT}" == "dev" ]; then
   BUILD=$((${BUILD} + 1))
   BUILD_VERSION="${VER}.${BUILD}"
   echo "BUILD_VERSION=${BUILD_VERSION}" > .version
+  cargo set-version ${BUILD_VERSION}
 fi
 
 echo "Running docker build for version ${BUILD_VERSION}"
@@ -40,8 +43,6 @@ CLOUD_REGION="us-central1"
 PROJECT_NAME="solver-438012"
 DOCKER_IMAGE="solver-docker-repo/blockclock-solver-image"
 DOCKER_TAG="${CLOUD_REGION}-docker.pkg.dev/${PROJECT_NAME}/${DOCKER_IMAGE}"
-
-test -d target && rm -rf target
 
 CURRENT_PROJECT=$(gcloud config get project)
 echo ${CURRENT_PROJECT}

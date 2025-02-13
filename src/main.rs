@@ -9,7 +9,7 @@ use axum::{
     serve, Json, Router,
 };
 use claim_avatar::handle_claim_avatar;
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use ethers::{
     middleware::MiddlewareBuilder,
     providers::{Http, Provider},
@@ -90,6 +90,10 @@ pub struct Args {
 
     #[arg(long)]
     pub tick_period: String,
+
+    // Added for suspending rewards during airdrop.
+    #[arg(long, default_value="false", default_missing_value="false", num_args(0..=1), action=ArgAction::Set)]
+    pub dry_run: bool,
 }
 
 #[tokio::main]
@@ -160,6 +164,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         primary_middleware,
         secondary_middleware,
         time_window,
+        args.dry_run,
     )));
 
     let mut time_tick = TimeTick::new(tick_period, meantime_comp, db_conn.clone());

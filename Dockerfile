@@ -40,4 +40,5 @@ CMD \
    "--secondary-chain-id=${SECONDARY_CHAIN_ID}" \
    "--secondary-http-chain-url=${SECONDARY_HTTP_CHAIN_URL}" \
    "--secondary-block-time-address=${SECONDARY_BLOCK_TIME_ADDRESS}" \
-   "--tick-period=${TICK_PERIOD}"
+   "--tick-period=${TICK_PERIOD}" \
+   "--dry-run=${DRY_RUN}"

@@ -38,4 +38,5 @@ cargo run \
   --primary-block-time-address=${PRIMARY_BLOCK_TIME_ADDRESS} \
   --secondary-chain-id=${SECONDARY_CHAIN_ID} \
   --secondary-http-chain-url=${SECONDARY_HTTP_CHAIN_URL} \
-  --secondary-block-time-address=${SECONDARY_BLOCK_TIME_ADDRESS}
+  --secondary-block-time-address=${SECONDARY_BLOCK_TIME_ADDRESS} \
+  --dry-run=true
