@@ -28,7 +28,7 @@ do
         SECONDARY_CHAIN_ID=84532
         SECONDARY_HTTP_CHAIN_URL="https://sepolia.base.org"
         SECONDARY_BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
-        DRY_RUN="true"
+        DRY_RUN="false"
         break
         ;;
     "prod")
@@ -46,7 +46,7 @@ do
         SECONDARY_CHAIN_ID=84532
         SECONDARY_HTTP_CHAIN_URL="https://sepolia.base.org"
         SECONDARY_BLOCK_TIME_ADDRESS="0xdD1B4D9337D0a8Ef2F133a39cC93EF85261b4A80"
-        DRY_RUN="true"
+        DRY_RUN="false"
         break
         ;;
     "quit")
