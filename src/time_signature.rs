@@ -1,4 +1,5 @@
 use ethers::{
+    abi::Token,
     prelude::abigen,
     types::{Address, Bytes, Signature, U256},
 };
@@ -34,6 +35,14 @@ impl Chronicle {
                 return false;
             }
         }
+    }
+
+    pub fn to_token_tuple(&self) -> Token {
+        Token::Tuple(vec![
+            Token::Uint(self.epoch),
+            Token::Address(self.time_keeper),
+            Token::Bytes(self.signature.clone().to_vec()),
+        ])
     }
 }
 
