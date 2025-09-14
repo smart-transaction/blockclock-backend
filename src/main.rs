@@ -8,13 +8,14 @@ use axum::{
     routing::{get, post},
     serve, Json, Router,
 };
+use call_breaker::CallBreakerData;
 use claim_avatar::handle_claim_avatar;
 use clap::{ArgAction, Parser};
 use ethers::{
     middleware::MiddlewareBuilder,
     providers::{Http, Provider},
     signers::{LocalWallet, Signer},
-    types::Address,
+    types::{Address, Bytes},
 };
 use get_time_keepers::handle_get_time_keepers;
 use log::{info, Level};
@@ -31,6 +32,7 @@ use tokio::{net::TcpListener, sync::Mutex, task::JoinSet};
 use tower_http::cors::{Any, CorsLayer};
 
 mod address_str;
+mod call_breaker;
 mod claim_avatar;
 mod db;
 mod get_time_keepers;
@@ -71,6 +73,9 @@ pub struct Args {
     pub solver_private_key: LocalWallet,
 
     #[arg(long)]
+    pub validator_private_key: LocalWallet,
+
+    #[arg(long)]
     pub primary_chain_id: u64,
 
     #[arg(long)]
@@ -86,7 +91,16 @@ pub struct Args {
     pub primary_block_time_address: Address,
 
     #[arg(long)]
+    pub primary_call_breaker_address: Address,
+
+    #[arg(long)]
     pub secondary_block_time_address: Address,
+
+    #[arg(long)]
+    pub secondary_call_breaker_address: Address,
+
+    #[arg(long)]
+    pub app_id: Bytes,
 
     #[arg(long)]
     pub tick_period: String,
@@ -131,10 +145,25 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .solver_private_key
         .clone()
         .with_chain_id(args.primary_chain_id);
-    let secondary_wallet = args.solver_private_key.with_chain_id(args.secondary_chain_id);
 
-    info!("Using primary wallet {}", format!("{:#x}", primary_wallet.address()));
-    info!("Using secondary wallet {}", format!("{:#x}", primary_wallet.address()));
+    let secondary_wallet = args
+        .solver_private_key
+        .clone()
+        .with_chain_id(args.secondary_chain_id);
+
+    let validator_wallet = args.validator_private_key.clone();
+
+    let app_id = args.app_id.clone();
+
+    info!(
+        "Using primary wallet {}",
+        format!("{:#x}", primary_wallet.address())
+    );
+
+    info!(
+        "Using secondary wallet {}",
+        format!("{:#x}", secondary_wallet.address())
+    );
 
     info!(
         "Connecting to the primary chain with URL {} ...",
@@ -154,15 +183,31 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "Successfully connected to the secondary chain {}.",
         args.secondary_chain_id
     );
-    let primary_middleware = Arc::new(primary_provider.with_signer(primary_wallet));
-    let secondary_middleware = Arc::new(secondary_provider.with_signer(secondary_wallet));
+
+    let primary_client = Arc::new(primary_provider.with_signer(primary_wallet.clone()));
+    let primary_call_breaker_comp = Arc::new(CallBreakerData::new(
+        args.primary_call_breaker_address,
+        args.primary_block_time_address,
+        primary_client,
+        primary_wallet,
+        validator_wallet.clone(),
+        app_id.clone(),
+    ));
+
+    let secondary_client = Arc::new(secondary_provider.with_signer(secondary_wallet.clone()));
+    let secondary_call_breaker_comp = Arc::new(CallBreakerData::new(
+        args.secondary_call_breaker_address,
+        args.secondary_block_time_address,
+        secondary_client,
+        secondary_wallet,
+        validator_wallet.clone(),
+        app_id.clone(),
+    ));
 
     let meantime_comp = Arc::new(Mutex::new(MeanTime::new(
         time_sig_pool.clone(),
-        args.primary_block_time_address,
-        args.secondary_block_time_address,
-        primary_middleware,
-        secondary_middleware,
+        primary_call_breaker_comp,
+        secondary_call_breaker_comp,
         time_window,
         args.dry_run,
     )));

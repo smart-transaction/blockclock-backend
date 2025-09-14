@@ -1,14 +1,20 @@
 use std::{
     collections::BTreeMap,
-    sync::Arc,
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        Arc,
+    },
     time::{Duration, SystemTime},
 };
 
 use ethers::{
+    abi::{encode, Token},
     providers::Middleware,
-    types::{Address, U256},
-    utils::parse_units,
+    signers::{LocalWallet, Signer},
+    types::{Address, Bytes, U256},
+    utils::{keccak256, parse_units},
 };
+
 use log::{error, info};
 use md5::{Context, Digest};
 use mysql::PooledConn;
@@ -16,32 +22,74 @@ use tokio::{spawn, sync::Mutex};
 
 use crate::{
     address_str::get_address_strings,
+    call_breaker::{AdditionalData, CallBreakerData, CallObject, MevTimeData, UserObjective},
     referrers_fetch::read_referrers_list,
     time_pool::TimeSigPool,
-    time_signature::{BlockTime, Chronicle},
+    time_signature::Chronicle,
 };
 
-pub struct MeanTime<M> {
+pub struct MeanTime<M: Middleware> {
     pool: Arc<Mutex<TimeSigPool>>,
-    primary_block_time_contract: BlockTime<M>,
-    secondary_block_time_contract: BlockTime<M>,
+    primary_call_breaker_comp: Arc<CallBreakerData<M>>,
+    secondary_call_breaker_comp: Arc<CallBreakerData<M>>,
     time_window: Duration,
     curr_md5: Digest,
     is_dry_run: bool,
 }
 
 const TIME_KEEPER_REWARD: f64 = 1.0;
+static NONCE: AtomicU32 = AtomicU32::new(0);
 
 async fn send_rewards<M: Middleware>(
-    block_time_contract: BlockTime<M>,
     last_sigs: Vec<Chronicle>,
     mean_time: U256,
     all_receivers: Vec<Address>,
     all_amounts: Vec<U256>,
+    call_breaker_data: Arc<CallBreakerData<M>>,
 ) -> bool {
-    match block_time_contract
-        .move_time(last_sigs.clone(), mean_time, all_receivers, all_amounts)
-        .gas(10000000)
+    // generate user_objective
+    let user_objective: UserObjective = prepare_call_and_user_objective(
+        &last_sigs,
+        &mean_time,
+        &all_receivers,
+        &all_amounts,
+        &call_breaker_data,
+    );
+
+    let user_objectives = vec![user_objective];
+    let returns_bytes = vec![Bytes::new()];
+    let order_of_execution = vec![U256::from(0)];
+
+    // generate mev_time_data
+    let mev_time_data = prepare_mev_time_data(
+        &last_sigs,
+        &mean_time,
+        &all_receivers,
+        &all_amounts,
+        &call_breaker_data.validator_wallet,
+    );
+
+    let estimated_gas = call_breaker_data
+        .call_breaker_contract
+        .execute_and_verify(
+            user_objectives.clone(),
+            returns_bytes.clone(),
+            order_of_execution.clone(),
+            mev_time_data.clone(),
+        )
+        .estimate_gas()
+        .await;
+
+    let gas_limit = estimated_gas.unwrap() * 120 / 100;
+    match call_breaker_data
+        .call_breaker_contract
+        .execute_and_verify(
+            user_objectives,
+            returns_bytes,
+            order_of_execution,
+            mev_time_data,
+        )
+        .gas(gas_limit)
         .send()
         .await
     {
@@ -52,6 +100,7 @@ async fn send_rewards<M: Middleware>(
                     if let Some(receipt) = receipt {
                         if let Some(status) = receipt.status {
                             info!("Got transaction status: {}", status);
+                            NONCE.fetch_add(1, Ordering::SeqCst);
                             return true;
                         }
                     }
@@ -71,26 +120,97 @@ async fn send_rewards<M: Middleware>(
     }
 }
 
+fn prepare_call_and_user_objective<M: Middleware>(
+    last_sigs: &[Chronicle],
+    mean_time: &U256,
+    all_receivers: &[Address],
+    all_amounts: &[U256],
+    call_breaker_data: &Arc<CallBreakerData<M>>,
+) -> UserObjective {
+    let call = call_breaker_data
+        .block_time_contract
+        .method::<(Vec<Chronicle>, U256, Vec<Address>, Vec<U256>), ()>(
+            "moveTime",
+            (
+                last_sigs.to_vec(),
+                *mean_time,
+                all_receivers.to_vec(),
+                all_amounts.to_vec(),
+            ),
+        )
+        .unwrap();
+    let calldata = call.calldata().unwrap();
+
+    let call_object = CallObject::new(
+        U256::from(1),
+        U256::from(0),
+        U256::from(1_000_000),
+        call_breaker_data.block_time_contract.address(),
+        calldata,
+        Bytes::new(),
+        true,
+        false,
+        true,
+    );
+
+    UserObjective::new(
+        call_breaker_data.app_id.clone(),
+        U256::from(NONCE.load(Ordering::SeqCst)),
+        U256::from(0),
+        U256::from(1),
+        U256::from(0),
+        U256::from(0),
+        Address::from(call_breaker_data.solver_wallet.address()),
+        call_breaker_data.solver_wallet.clone(),
+        vec![call_object],
+    )
+}
+
+fn prepare_mev_time_data(
+    last_sigs: &[Chronicle],
+    mean_time: &U256,
+    all_receivers: &[Address],
+    all_amounts: &[U256],
+    validator_wallet: &LocalWallet,
+) -> MevTimeData {
+    let last_sig_token: Vec<Token> = last_sigs.iter().map(|c| c.to_token_tuple()).collect();
+    let last_sig_encoded = encode(&[Token::Array(last_sig_token)]);
+    let last_sig_bytes = Bytes::from(last_sig_encoded);
+
+    let mean_time_encoded = encode(&[Token::Uint(*mean_time)]);
+    let mean_time_bytes = Bytes::from(mean_time_encoded);
+
+    let all_receivers_tokens: Vec<Token> =
+        all_receivers.iter().copied().map(Token::Address).collect();
+    let all_receivers_encoded = encode(&[Token::Array(all_receivers_tokens)]);
+    let all_receivers_bytes = Bytes::from(all_receivers_encoded);
+
+    let all_amounts_tokens: Vec<Token> = all_amounts.iter().copied().map(Token::Uint).collect();
+    let all_amounts_encoded = encode(&all_amounts_tokens);
+    let all_amounts_bytes = Bytes::from(all_amounts_encoded);
+
+    let mev_time_data_values = vec![
+        AdditionalData::new(keccak256(b"Chronicles").into(), last_sig_bytes),
+        AdditionalData::new(keccak256(b"CurrentMeanTime").into(), mean_time_bytes),
+        AdditionalData::new(keccak256(b"Receivers").into(), all_receivers_bytes),
+        AdditionalData::new(keccak256(b"Amounts").into(), all_amounts_bytes),
+    ];
+
+    MevTimeData::new(validator_wallet.clone(), mev_time_data_values)
+}
+
 impl<M: Middleware + 'static> MeanTime<M> {
     pub fn new(
         pool: Arc<Mutex<TimeSigPool>>,
-        primary_block_time_address: Address,
-        secondary_block_time_address: Address,
-        primary_middleware: Arc<M>,
-        secondary_middleware: Arc<M>,
+        primary_call_breaker_comp: Arc<CallBreakerData<M>>,
+        secondary_call_breaker_comp: Arc<CallBreakerData<M>>,
         time_window: Duration,
         is_dry_run: bool,
     ) -> MeanTime<M> {
         MeanTime {
             pool,
-            primary_block_time_contract: BlockTime::new(
-                primary_block_time_address,
-                primary_middleware,
-            ),
-            secondary_block_time_contract: BlockTime::new(
-                secondary_block_time_address,
-                secondary_middleware,
-            ),
+            primary_call_breaker_comp,
+            secondary_call_breaker_comp,
             time_window,
             curr_md5: md5::compute("--dummy--"),
             is_dry_run,
@@ -201,26 +321,26 @@ impl<M: Middleware + 'static> MeanTime<M> {
             let primary_last_sigs = last_sigs.clone();
             let primary_all_receivers = all_receivers.clone();
             let primary_all_amounts = all_amounts.clone();
-            let primary_contract = self.primary_block_time_contract.clone();
+            let primary_call_breaker_comp = self.primary_call_breaker_comp.clone();
             let primary_handle = spawn(async move {
                 return send_rewards(
-                    primary_contract,
                     primary_last_sigs,
                     mean_time,
                     primary_all_receivers,
                     primary_all_amounts,
+                    primary_call_breaker_comp,
                 )
                 .await;
             });
 
-            let secondary_contract = self.secondary_block_time_contract.clone();
+            let secondary_call_breaker_comp = self.secondary_call_breaker_comp.clone();
             let secondary_handle = spawn(async move {
                 return send_rewards(
-                    secondary_contract,
                     last_sigs,
                     mean_time,
                     all_receivers,
                     all_amounts,
+                    secondary_call_breaker_comp,
                 )
                 .await;
             });
@@ -245,11 +365,12 @@ mod tests {
 
     use ethers::{
         providers::{MockProvider, Provider},
+        signers::LocalWallet,
         types::{Address, Bytes},
     };
     use tokio::sync::Mutex;
 
-    use crate::time_signature::Chronicle;
+    use crate::{call_breaker::CallBreakerData, time_signature::Chronicle};
 
     use super::MeanTime;
 
@@ -274,12 +395,40 @@ mod tests {
         ];
         let time_window = parse_duration::parse("2s").unwrap();
         let pool = Arc::new(Mutex::new(pool_vec));
+        let primary_call_breaker_comp = Arc::new(CallBreakerData::new(
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a022").unwrap(),
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Arc::new(Provider::new(MockProvider::new())),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000000001")
+                .unwrap(),
+        ));
+        let secondary_call_breaker_comp = Arc::new(CallBreakerData::new(
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a022").unwrap(),
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Arc::new(Provider::new(MockProvider::new())),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000000001")
+                .unwrap(),
+        ));
         let mean_time = MeanTime::new(
             pool.clone(),
-            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
-            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
-            Arc::new(Provider::new(MockProvider::new())),
-            Arc::new(Provider::new(MockProvider::new())),
+            primary_call_breaker_comp,
+            secondary_call_breaker_comp,
             time_window,
             false,
         );
@@ -319,12 +468,40 @@ mod tests {
         ];
         let time_window = parse_duration::parse("2s").unwrap();
         let pool = Arc::new(Mutex::new(pool_vec));
+        let primary_call_breaker_comp = Arc::new(CallBreakerData::new(
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a022").unwrap(),
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Arc::new(Provider::new(MockProvider::new())),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000000001")
+                .unwrap(),
+        ));
+        let secondary_call_breaker_comp = Arc::new(CallBreakerData::new(
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a022").unwrap(),
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Arc::new(Provider::new(MockProvider::new())),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000000001")
+                .unwrap(),
+        ));
         let mean_time = MeanTime::new(
             pool.clone(),
-            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
-            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
-            Arc::new(Provider::new(MockProvider::new())),
-            Arc::new(Provider::new(MockProvider::new())),
+            primary_call_breaker_comp,
+            secondary_call_breaker_comp,
             time_window,
             false,
         );
@@ -348,12 +525,40 @@ mod tests {
         let pool_vec = Vec::new();
         let time_window = parse_duration::parse("2s").unwrap();
         let pool = Arc::new(Mutex::new(pool_vec));
+        let primary_call_breaker_comp = Arc::new(CallBreakerData::new(
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a022").unwrap(),
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Arc::new(Provider::new(MockProvider::new())),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000000001")
+                .unwrap(),
+        ));
+        let secondary_call_breaker_comp = Arc::new(CallBreakerData::new(
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a022").unwrap(),
+            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
+            Arc::new(Provider::new(MockProvider::new())),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            LocalWallet::from_str(
+                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            )
+            .unwrap(),
+            Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000000001")
+                .unwrap(),
+        ));
         let mean_time = MeanTime::new(
             pool.clone(),
-            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
-            Address::from_str("0x8ab3c48c839376d2b79ab98f23f5b2406a06a029").unwrap(),
-            Arc::new(Provider::new(MockProvider::new())),
-            Arc::new(Provider::new(MockProvider::new())),
+            primary_call_breaker_comp,
+            secondary_call_breaker_comp,
             time_window,
             false,
         );

@@ -9,7 +9,7 @@ use tokio::{spawn, sync::Mutex, time::interval};
 
 use crate::meantime::MeanTime;
 
-pub struct TimeTick<M> {
+pub struct TimeTick<M: Middleware> {
     period: Duration,
     mean_time: Arc<Mutex<MeanTime<M>>>,
     conn: Arc<Mutex<PooledConn>>,
