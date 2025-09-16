@@ -127,7 +127,7 @@ pub async fn is_avatar_available(
 pub async fn is_referral_code_available(
     conn: &mut Conn,
     addr: &Address,
-    referral_code: &String
+    referral_code: &String,
 ) -> Result<bool, Box<dyn Error>> {
     check_conn(conn);
 

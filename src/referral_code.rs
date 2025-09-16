@@ -15,10 +15,14 @@ pub async fn handle_update_referral_code(
     db_conn: Arc<Mutex<PooledConn>>,
 ) -> Result<(), StatusCode> {
     let mut conn = db_conn.lock().await;
-    match is_referral_code_available(conn.as_mut(), &input.time_keeper, &input.referral_code).await {
+    match is_referral_code_available(conn.as_mut(), &input.time_keeper, &input.referral_code).await
+    {
         Ok(is_avail) => {
             if !is_avail {
-                warn!("The referral code {} is already in use", input.referral_code);
+                warn!(
+                    "The referral code {} is already in use",
+                    input.referral_code
+                );
                 return Err(StatusCode::CONFLICT);
             }
         }
